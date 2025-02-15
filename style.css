@@ -1,0 +1,343 @@
+/* style.css */
+
+/* Basic reset / layout */
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: sans-serif;
+  min-width: 320px;
+  background: linear-gradient(135deg, #f8f9fa, #eef1f4);
+  color: #333;
+}
+
+/* Container for popup pages */
+.container {
+  padding: 10px;
+}
+.title {
+  text-align: center;
+  margin-bottom: 12px;
+  font-size: 18px;
+}
+
+/* Container for Options page */
+.options-container {
+  max-width: 500px;
+  margin: 20px auto;
+  background: rgba(255,255,255,0.7);
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+/* Cards */
+.card {
+  background: rgba(255,255,255,0.9);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+/* Buttons */
+.btn {
+  padding: 6px 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  margin-right: 6px;
+  margin-bottom: 6px;
+  transition: background-color 0.3s, transform 0.3s;
+}
+.btn:hover {
+  opacity: 0.9;
+  transform: scale(1.02);
+}
+.btn-blue {
+  background-color: #2196f3;
+  color: #fff;
+}
+.btn-green {
+  background-color: #4caf50;
+  color: #fff;
+}
+.btn-purple {
+  background-color: #9c27b0;
+  color: #fff;
+}
+.btn-gray {
+  background-color: #9e9e9e;
+  color: #fff;
+}
+.btn-small {
+  font-size: 12px;
+  padding: 3px 6px;
+}
+
+/* Inputs */
+input[type="text"],
+input[type="number"],
+textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 13px;
+  padding: 6px;
+  margin-bottom: 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+input:focus, textarea:focus {
+  outline: none;
+  border-color: #2196f3;
+  box-shadow: 0 0 4px rgba(33,150,243,0.3);
+}
+
+/* Flex layout helpers */
+.flex-right {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+.flex-left {
+  display: flex;
+  align-items: center;
+}
+.margin-bottom {
+  margin-bottom: 8px;
+}
+.margin-top {
+  margin-top: 8px;
+}
+.small-note {
+  font-size: 12px;
+  color: #666;
+}
+
+/* Toast messages */
+.toast-container {
+  position: fixed;
+  bottom: 10px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  z-index: 999999;
+}
+.toast {
+  background-color: #333;
+  color: #fff;
+  padding: 8px 12px;
+  margin-top: 4px;
+  border-radius: 4px;
+  pointer-events: auto;
+  min-width: 200px;
+  text-align: center;
+  font-size: 13px;
+  transition: transform 0.4s, opacity 0.4s;
+}
+.toast-success {
+  background-color: #4caf50;
+}
+.toast-error {
+  background-color: #f44336;
+}
+.fade-in {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeSlideIn 0.4s forwards;
+}
+.fade-out {
+  animation: fadeSlideOut 0.5s forwards;
+}
+@keyframes fadeSlideIn {
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeSlideOut {
+  to { opacity: 0; transform: translateY(20px); }
+}
+
+/* Results containers */
+.results-container { margin-top: 10px; }
+.track-result {
+  background: rgba(255,255,255,0.9);
+  padding: 8px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  position: relative;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+.track-result:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+.track-title {
+  margin-top: 0;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: bold;
+}
+.album-cover {
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+.track-info p,
+.audio-features p {
+  margin: 4px 0;
+}
+
+/* Animations */
+.slide-in {
+  animation: slideIn 0.4s ease-out;
+}
+@keyframes slideIn {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Search results styling */
+.search-results .search-result-item {
+  background: rgba(255,255,255,0.8);
+  padding: 6px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: box-shadow 0.3s, transform 0.3s;
+}
+.search-result-item:hover {
+  transform: translateX(2px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Dark mode */
+.dark-mode body,
+.dark-mode .container {
+  background: linear-gradient(135deg, #2f2f2f, #1c1c1c);
+  color: #ccc;
+}
+.dark-mode .card {
+  background: rgba(50,50,50,0.9);
+}
+.dark-mode .track-result {
+  background: rgba(60,60,60,0.9);
+}
+.dark-mode .search-result-item {
+  background: rgba(80,80,80,0.8);
+}
+.dark-mode input,
+.dark-mode textarea {
+  background-color: #3c3c3c;
+  border: 1px solid #555;
+  color: #ccc;
+}
+.dark-mode .small-note {
+  color: #aaa;
+}
+
+/* Toggle Switch */
+.dark-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  margin-right: 8px;
+}
+.dark-toggle input {
+  position: absolute;
+  width: 0; height: 0;
+  opacity: 0;
+}
+.slider {
+  width: 40px; height: 20px;
+  background-color: #ccc;
+  border-radius: 20px;
+  margin-right: 4px;
+  position: relative;
+  transition: background-color 0.3s;
+}
+.slider:before {
+  content: "";
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 16px; height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.3s;
+}
+.dark-toggle input:checked + .slider {
+  background-color: #4caf50;
+}
+.dark-toggle input:checked + .slider:before {
+  transform: translateX(20px);
+}
+.label-text {
+  font-size: 14px;
+}
+
+/* Expanded popup */
+.expanded-popup {
+  width: 600px !important;
+  height: 700px !important;
+}
+
+/* Tooltip */
+[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  background: #000;
+  color: #fff;
+  padding: 4px 8px;
+  font-size: 12px;
+  border-radius: 4px;
+  margin-top: 6px;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  left: 50%;
+  bottom: -28px;
+}
+
+/* Accordion (in Options) */
+.accordion {
+  background: rgba(255,255,255,0.8);
+  border-radius: 6px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.accordion-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.3s;
+}
+.accordion-header:hover {
+  background-color: rgba(240,240,240,0.8);
+}
+.accordion-toggle {
+  font-weight: bold;
+  font-size: 18px;
+}
+.accordion-body {
+  padding: 10px;
+}
+.dark-mode .accordion {
+  background-color: rgba(70,70,70,0.8);
+}
+.dark-mode .accordion-header:hover {
+  background-color: rgba(90,90,90,0.7);
+}

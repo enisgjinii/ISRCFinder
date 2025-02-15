@@ -1,0 +1,34 @@
+{
+  "manifest_version": 2,
+  "name": "Kërkuesi i Avancuar i Metadatave Spotify (Cross-Browser)",
+  "description": "Find ISRC, UPC, Audio Features, album info, with one codebase for Firefox/Chrome/Edge!",
+  "version": "1.0.0",
+
+  "permissions": [
+    "storage",
+    "activeTab",
+    "tabs",
+    "*://api.spotify.com/*",
+    "*://accounts.spotify.com/*"
+  ],
+
+  "browser_action": {
+    "default_popup": "popup.html"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": true
+  },
+
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "spotify-meta-finder@example.com",
+      "strict_min_version": "57.0"
+    }
+  }
+}
