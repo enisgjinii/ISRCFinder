@@ -9,7 +9,6 @@ const youtubeSimilarBtn = document.getElementById("youtubeSimilarBtn");
 
 const spotifyLinksInput = document.getElementById("spotifyLinksInput");
 const fetchLinksBtn = document.getElementById("fetchLinksBtn");
-const clearResultsBtn = document.getElementById("clearResultsBtn");
 
 const searchTrackInput = document.getElementById("searchTrackInput");
 const searchTrackBtn = document.getElementById("searchTrackBtn");
@@ -17,11 +16,15 @@ const searchAlbumInput = document.getElementById("searchAlbumInput");
 const searchAlbumBtn = document.getElementById("searchAlbumBtn");
 const searchResultsDiv = document.getElementById("searchResults");
 
+const youtubeLinksInput = document.getElementById("youtubeLinksInput");
+const fetchYoutubeBtn = document.getElementById("fetchYoutubeBtn");
+
+const clearResultsBtn = document.getElementById("clearResultsBtn");
 const resultsDiv = document.getElementById("results");
 const toastContainer = document.getElementById("toastContainer");
 const htmlRoot = document.documentElement;
 
-// Toast
+/* ========== TOAST ========== */
 function showToast(message, type = "info") {
   const toast = document.createElement("div");
   toast.classList.add("toast", "fade-in");
@@ -37,8 +40,8 @@ function showToast(message, type = "info") {
   }, 3000);
 }
 
-// Dark Mode
-async function loadDarkModePreference() {
+/* ========== DARK MODE ========== */
+function loadDarkModePreference() {
   chrome.storage.local.get("darkModeEnabled", (data) => {
     if (data.darkModeEnabled) {
       darkModeToggle.checked = true;
@@ -59,7 +62,7 @@ darkModeToggle.addEventListener("change", () => {
   }
 });
 
-// Expand Popup
+/* ========== EXPAND POPUP ========== */
 let isExpanded = false;
 expandViewBtn.addEventListener("click", () => {
   isExpanded = !isExpanded;
@@ -72,62 +75,60 @@ expandViewBtn.addEventListener("click", () => {
   }
 });
 
-// Open Options
+/* ========== OPEN OPTIONS ========== */
 openOptionsBtn.addEventListener("click", () => {
-  // In MV2 cross-browser, we can just open the options page
   if (chrome.runtime.openOptionsPage) {
     chrome.runtime.openOptionsPage();
   } else {
-    // Fallback if not supported
     window.open(chrome.runtime.getURL("options.html"));
   }
 });
 
-// Detect Current Tab
+/* ========== DETECT CURRENT TAB ========== */
 detectCurrentTabBtn.addEventListener("click", () => {
-  // 'tabs' permission used
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    if (!tabs || !tabs.length) {
-      showToast("Asnjë tab aktiv.", "error");
+    if (!tabs.length) {
+      showToast("S'ka tab aktiv.", "error");
       return;
     }
     const url = tabs[0].url || "";
     if (url.includes("spotify.com/track/") || url.includes("spotify.com/album/")) {
       spotifyLinksInput.value = url;
-      showToast("👍 U zbulua link Spotify!", "success");
+      showToast("Link Spotify u gjet!", "success");
     } else if (url.includes("youtube.com/watch")) {
-      showToast("Jeni në YouTube. Provo 'Youtube → Spotify'!", "info");
+      youtubeLinksInput.value = url;
+      showToast("Link YouTube u gjet!", "success");
     } else {
-      showToast("Nuk është Spotify ose YouTube!", "error");
+      showToast("Nuk është as Spotify, as YouTube!", "error");
     }
   });
 });
 
-// YouTube → Spotify
+/* ========== YOUTUBE → SPOTIFY ========== */
 youtubeSimilarBtn.addEventListener("click", () => {
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     if (!tabs.length) {
-      showToast("Asnjë tab aktiv.", "error");
+      showToast("S'ka tab aktiv.", "error");
       return;
     }
     const tab = tabs[0];
     if (!tab.url.includes("youtube.com/watch")) {
-      showToast("Faqja nuk është YouTube video!", "error");
+      showToast("Nuk është një video YouTube!", "error");
       return;
     }
     const videoTitle = tab.title.replace(" - YouTube", "").trim();
     if (!videoTitle) {
-      showToast("Nuk mund të marr titullin e videos.", "error");
+      showToast("S'ka titull videoje.", "error");
       return;
     }
     chrome.runtime.sendMessage({ action: "GET_YOUTUBE_SIMILAR", title: videoTitle }, (resp) => {
       if (!resp || !resp.success) {
-        showToast(`Gabim: ${resp?.error || "No resp"}`, "error");
+        showToast(`Gabim: ${resp?.error || "Asnjë përgjigje"}`, "error");
         return;
       }
       const items = resp.searchData.tracks?.items || [];
       if (!items.length) {
-        showToast("Asnjë rezultat i ngjashëm me titullin.", "info");
+        showToast("Asnjë rezultat i ngjashëm me këtë titull.", "info");
         return;
       }
       searchResultsDiv.innerHTML = "";
@@ -143,33 +144,33 @@ youtubeSimilarBtn.addEventListener("click", () => {
         });
         searchResultsDiv.appendChild(row);
       });
-      showToast("Rezultatet nga YouTube → Spotify", "success");
+      showToast("Rezultatet (YouTube → Spotify)", "success");
     });
   });
 });
 
-// Fetch Links (Track or Album)
+/* ========== FETCH SPOTIFY LINKS ========== */
 fetchLinksBtn.addEventListener("click", async () => {
   resultsDiv.innerHTML = "";
   const raw = spotifyLinksInput.value.trim();
   if (!raw) {
-    showToast("Vendosni të paktën një URL Spotify.", "error");
+    showToast("Vendosni të paktën një link Spotify.", "error");
     return;
   }
   const lines = raw.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
 
   for (const line of lines) {
     if (line.includes("spotify.com/track/")) {
-      const trackId = parseId(line, "track");
+      const trackId = parseSpotifyId(line, "track");
       if (!trackId) {
-        showToast(`Link i pavlefshëm i track: ${line}`, "error");
+        showToast(`Link i pavlefshëm (track): ${line}`, "error");
         continue;
       }
       await fetchTrackById(trackId);
     } else if (line.includes("spotify.com/album/")) {
-      const albumId = parseId(line, "album");
+      const albumId = parseSpotifyId(line, "album");
       if (!albumId) {
-        showToast(`Link i pavlefshëm i albumit: ${line}`, "error");
+        showToast(`Link i pavlefshëm (album): ${line}`, "error");
         continue;
       }
       await fetchAlbumById(albumId);
@@ -177,9 +178,10 @@ fetchLinksBtn.addEventListener("click", async () => {
       showToast(`Nuk njihet si track ose album: ${line}`, "error");
     }
   }
-  showToast("Përfundoi marrja e link-eve!", "success");
+  showToast("Përfundoi marrja e link-eve Spotify!", "success");
 });
-function parseId(link, type) {
+
+function parseSpotifyId(link, type) {
   if (!link.includes(`spotify.com/${type}/`)) return "";
   const parts = link.split(`${type}/`);
   if (parts.length < 2) return "";
@@ -213,14 +215,14 @@ async function fetchAlbumById(albumId) {
   });
 }
 
-// Clear
+/* ========== CLEAR RESULTS ========== */
 clearResultsBtn.addEventListener("click", () => {
   resultsDiv.innerHTML = "";
   searchResultsDiv.innerHTML = "";
   showToast("Rezultatet u pastruan.", "success");
 });
 
-// Search Tracks
+/* ========== SEARCH SPOTIFY TRACKS ========== */
 searchTrackBtn.addEventListener("click", () => {
   const query = searchTrackInput.value.trim();
   if (!query) {
@@ -250,11 +252,11 @@ searchTrackBtn.addEventListener("click", () => {
       });
       searchResultsDiv.appendChild(row);
     });
-    showToast("Rezultate Këngësh", "success");
+    showToast("Rezultate Këngësh (Spotify)", "success");
   });
 });
 
-// Search Albums
+/* ========== SEARCH SPOTIFY ALBUMS ========== */
 searchAlbumBtn.addEventListener("click", () => {
   const query = searchAlbumInput.value.trim();
   if (!query) {
@@ -284,11 +286,60 @@ searchAlbumBtn.addEventListener("click", () => {
       });
       searchResultsDiv.appendChild(row);
     });
-    showToast("Rezultate Albumesh", "success");
+    showToast("Rezultate Albumesh (Spotify)", "success");
   });
 });
 
-// Build UI
+/* ========== FETCH YOUTUBE LINKS ========== */
+fetchYoutubeBtn.addEventListener("click", async () => {
+  const raw = youtubeLinksInput.value.trim();
+  if (!raw) {
+    showToast("Vendosni të paktën një link YouTube.", "error");
+    return;
+  }
+  resultsDiv.innerHTML = "";
+  const lines = raw.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+
+  for (const line of lines) {
+    const videoId = parseYoutubeVideoId(line);
+    if (!videoId) {
+      showToast(`Link i pavlefshëm YouTube: ${line}`, "error");
+      continue;
+    }
+    // Send message to background
+    await new Promise((resolve) => {
+      chrome.runtime.sendMessage({ action: "GET_YOUTUBE_VIDEO_DATA", videoId }, (resp) => {
+        if (!resp || !resp.success) {
+          showToast(`Gabim YT data: ${resp?.error || "No resp"}`, "error");
+          return resolve();
+        }
+        const el = buildYoutubeEl(resp.videoData);
+        resultsDiv.appendChild(el);
+        resolve();
+      });
+    });
+  }
+  showToast("Përfundoi marrja e link-eve YouTube!", "success");
+});
+
+function parseYoutubeVideoId(url) {
+  // Many ways to parse. We'll do a naive approach: "v="
+  // e.g. https://www.youtube.com/watch?v=VIDEO_ID
+  // Possibly also short links like youtu.be/VIDEO_ID
+  try {
+    if (url.includes("youtube.com/watch?v=")) {
+      const parts = url.split("v=");
+      if (parts.length < 2) return "";
+      return parts[1].split("&")[0];
+    } else if (url.includes("youtu.be/")) {
+      const parts = url.split("youtu.be/");
+      return parts[1].split("?")[0];
+    }
+  } catch {}
+  return "";
+}
+
+/* ========== BUILD UI ELEMENTS (SPOTIFY) ========== */
 function buildTrackEl(trackData, audioFeatures) {
   const container = document.createElement("div");
   container.classList.add("track-result", "slide-in");
@@ -321,8 +372,8 @@ function buildTrackEl(trackData, audioFeatures) {
     <p><strong>Album:</strong> ${albumName}</p>
     <p><strong>Data Publikimit:</strong> ${releaseDate}</p>
     <p><strong>Popullariteti:</strong> ${popularity}</p>
-    <p><strong>ISRC:</strong> ${isrc} <button class="copy-btn" data-value="${isrc}">📋</button></p>
-    <p><strong>UPC Albumi:</strong> ${upc} <button class="copy-btn" data-value="${upc}">📋</button></p>
+    <p><strong>ISRC:</strong> ${isrc}</p>
+    <p><strong>UPC:</strong> ${upc}</p>
   `;
   container.appendChild(info);
 
@@ -337,24 +388,14 @@ function buildTrackEl(trackData, audioFeatures) {
     container.appendChild(feats);
   }
 
-  container.querySelectorAll(".copy-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const val = btn.getAttribute("data-value") || "";
-      if (val && val !== "N/A") {
-        navigator.clipboard.writeText(val)
-          .then(() => showToast(`U kopjua: ${val}`, "success"))
-          .catch(() => showToast("Nuk u kopjua.", "error"));
-      } else {
-        showToast("Asgjë për të kopjuar!", "error");
-      }
-    });
-  });
-
   const jsonBtn = document.createElement("button");
   jsonBtn.classList.add("btn", "btn-small", "btn-blue", "margin-top");
   jsonBtn.textContent = "Shkarko JSON";
   jsonBtn.addEventListener("click", () => {
-    const blob = new Blob([JSON.stringify({ trackData, audioFeatures }, null, 2)], { type: "application/json" });
+    const blob = new Blob(
+      [JSON.stringify({ trackData, audioFeatures }, null, 2)],
+      { type: "application/json" }
+    );
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -366,7 +407,6 @@ function buildTrackEl(trackData, audioFeatures) {
 
   return container;
 }
-
 function buildAlbumEl(albumData) {
   const container = document.createElement("div");
   container.classList.add("track-result", "slide-in");
@@ -396,22 +436,9 @@ function buildAlbumEl(albumData) {
   info.innerHTML = `
     <p><strong>Data Publikimit:</strong> ${releaseDate}</p>
     <p><strong>Shtëpia Diskografike:</strong> ${label}</p>
-    <p><strong>UPC:</strong> ${upc} <button class="copy-btn" data-value="${upc}">📋</button></p>
+    <p><strong>UPC:</strong> ${upc}</p>
   `;
   container.appendChild(info);
-
-  container.querySelectorAll(".copy-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const val = btn.getAttribute("data-value") || "";
-      if (val && val !== "N/A") {
-        navigator.clipboard.writeText(val)
-          .then(() => showToast(`U kopjua: ${val}`, "success"))
-          .catch(() => showToast("Nuk u kopjua.", "error"));
-      } else {
-        showToast("Asgjë për të kopjuar!", "error");
-      }
-    });
-  });
 
   const jsonBtn = document.createElement("button");
   jsonBtn.classList.add("btn", "btn-small", "btn-blue", "margin-top");
@@ -422,6 +449,61 @@ function buildAlbumEl(albumData) {
     const a = document.createElement("a");
     a.href = url;
     a.download = albumName.replace(/\s+/g, "_") + ".json";
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+  container.appendChild(jsonBtn);
+
+  return container;
+}
+
+/* ========== BUILD UI FOR YOUTUBE VIDEO ========== */
+function buildYoutubeEl(videoData) {
+  // videoData: { videoId, title, duration, descriptionLines: {...} }
+  const container = document.createElement("div");
+  container.classList.add("track-result", "slide-in");
+
+  const heading = document.createElement("h3");
+  heading.classList.add("track-title");
+  heading.textContent = `🎬 ${videoData.title}`;
+  container.appendChild(heading);
+
+  const info = document.createElement("div");
+  info.classList.add("track-info");
+  info.innerHTML = `
+    <p><strong>ID e Videos:</strong> ${videoData.videoId}</p>
+    <p><strong>Kohëzgjatja:</strong> ${videoData.duration}</p>
+  `;
+  container.appendChild(info);
+
+  // Unpack the description lines
+  const descObj = videoData.descriptionLines;
+  const linesEl = document.createElement("div");
+  linesEl.classList.add("audio-features"); // reuse a style class or create a new one
+
+  // Show each field if present
+  linesEl.innerHTML = `
+    <p><strong>Music & Produced:</strong> ${descObj.musicProduced || "N/A"}</p>
+    <p><strong>Text:</strong> ${descObj.text || "N/A"}</p>
+    <p><strong>Video:</strong> ${descObj.video || "N/A"}</p>
+    <p><strong>Special Guest:</strong> ${descObj.specialGuest || "N/A"}</p>
+    <p><strong>Thanks To:</strong> ${descObj.thanksTo || "N/A"}</p>
+    <p><strong>Publisher:</strong> ${descObj.publisher || "N/A"}</p>
+    <p><strong>Licensing:</strong> ${descObj.licensing || "N/A"}</p>
+    <p><strong>ISRC:</strong> ${descObj.isrc || "N/A"}</p>
+    <p><strong>UPC:</strong> ${descObj.upc || "N/A"}</p>
+  `;
+  container.appendChild(linesEl);
+
+  const jsonBtn = document.createElement("button");
+  jsonBtn.classList.add("btn", "btn-small", "btn-blue", "margin-top");
+  jsonBtn.textContent = "Shkarko JSON (YouTube)";
+  jsonBtn.addEventListener("click", () => {
+    const blob = new Blob([JSON.stringify(videoData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = videoData.title.replace(/\s+/g, "_") + ".json";
     a.click();
     URL.revokeObjectURL(url);
   });
