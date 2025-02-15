@@ -1,110 +1,135 @@
-// options.js
-
-const clientIdInput = document.getElementById("clientIdInput");
-const clientSecretInput = document.getElementById("clientSecretInput");
-const durationInput = document.getElementById("durationInput");
-
-const saveOptionsBtn = document.getElementById("saveOptionsBtn");
-const clearCredsBtn = document.getElementById("clearCredsBtn");
-const testCredsBtn = document.getElementById("testCredsBtn");
-
-const credsAccordionHeader = document.getElementById("credsAccordionHeader");
-const credsAccordionBody = document.getElementById("credsAccordionBody");
-const accordionToggle = credsAccordionHeader.querySelector(".accordion-toggle");
-
+const spotifyAccordionHeader = document.getElementById("spotifyAccordionHeader");
+const spotifyAccordionBody = document.getElementById("spotifyAccordionBody");
+const youtubeAccordionHeader = document.getElementById("youtubeAccordionHeader");
+const youtubeAccordionBody = document.getElementById("youtubeAccordionBody");
+const spotifyClientId = document.getElementById("spotifyClientId");
+const spotifyClientSecret = document.getElementById("spotifyClientSecret");
+const spotifyDuration = document.getElementById("spotifyDuration");
+const youtubeApiKey = document.getElementById("youtubeApiKey");
+const saveBtn = document.getElementById("saveBtn");
+const clearBtn = document.getElementById("clearBtn");
+const testBtn = document.getElementById("testBtn");
 const toastContainer = document.getElementById("toastContainer");
 
 function showToast(message, type = "info") {
-  const toast = document.createElement("div");
-  toast.classList.add("toast", "fade-in");
-  if (type === "success") toast.classList.add("toast-success");
-  else if (type === "error") toast.classList.add("toast-error");
-  toast.textContent = message;
-
-  toastContainer.appendChild(toast);
-  setTimeout(() => {
-    toast.classList.remove("fade-in");
-    toast.classList.add("fade-out");
-    setTimeout(() => toast.remove(), 500);
-  }, 3000);
+  try {
+    const toast = document.createElement("div");
+    toast.classList.add("toast", "fade-in");
+    toast.classList.add(type === "success" ? "toast-success" : type === "error" ? "toast-error" : "");
+    toast.textContent = message;
+    toastContainer.appendChild(toast);
+    setTimeout(() => {
+      toast.classList.remove("fade-in");
+      toast.classList.add("fade-out");
+      setTimeout(() => toast.remove(), 500);
+    }, 3000);
+  } catch (error) {
+    console.error(error);
+  }
 }
 
 function loadOptions() {
-  chrome.storage.local.get("userCredentials", (data) => {
-    const userCredentials = data.userCredentials;
-    if (userCredentials) {
-      clientIdInput.value = userCredentials.clientId;
-      clientSecretInput.value = userCredentials.clientSecret;
-      let hoursLeft = Math.floor((userCredentials.expiresAt - Date.now()) / (3600*1000));
-      if (hoursLeft < 1) hoursLeft = 8;
-      durationInput.value = hoursLeft;
-    } else {
-      durationInput.value = 8;
+  try {
+    chrome.storage.local.get(["userCredentials", "youtubeApiKey"], (data) => {
+      if (data.userCredentials) {
+        spotifyClientId.value = data.userCredentials.clientId;
+        spotifyClientSecret.value = data.userCredentials.clientSecret;
+        let hoursLeft = Math.floor((data.userCredentials.expiresAt - Date.now()) / 3600000);
+        spotifyDuration.value = hoursLeft < 1 ? 8 : hoursLeft;
+      } else {
+        spotifyDuration.value = 8;
+      }
+      if (data.youtubeApiKey) youtubeApiKey.value = data.youtubeApiKey;
+    });
+    const states = JSON.parse(localStorage.getItem("accordionStates") || "{}");
+    if (states.spotifyOpen) {
+      spotifyAccordionBody.style.display = "block";
+      spotifyAccordionHeader.querySelector(".accordion-toggle").textContent = "–";
     }
-  });
+    if (states.youtubeOpen) {
+      youtubeAccordionBody.style.display = "block";
+      youtubeAccordionHeader.querySelector(".accordion-toggle").textContent = "–";
+    }
+  } catch (error) {
+    console.error(error);
+  }
 }
 
 function saveOptions() {
-  const cId = clientIdInput.value.trim();
-  const cSecret = clientSecretInput.value.trim();
-  let hrs = parseInt(durationInput.value.trim(), 10);
-  if (!hrs || hrs < 1) hrs = 8;
-
-  if (!cId || !cSecret) {
-    showToast("Ju lutem vendosni Client ID dhe Secret.", "error");
-    return;
-  }
-  const now = Date.now();
-  const expiresAt = now + hrs * 3600 * 1000;
-
-  const userCredentials = {
-    clientId: cId,
-    clientSecret: cSecret,
-    expiresAt
-  };
-
-  chrome.storage.local.set({ userCredentials }, () => {
-    // Remove old token so it refreshes
-    chrome.storage.local.remove("spotifyTokenData", () => {
-      showToast(`U ruajtën kredencialet për ${hrs} orë.`, "success");
-    });
-  });
-}
-
-function clearCredentials() {
-  chrome.storage.local.remove(["userCredentials", "spotifyTokenData"], () => {
-    clientIdInput.value = "";
-    clientSecretInput.value = "";
-    durationInput.value = "8";
-    showToast("Kredencialet u fshinë.", "success");
-  });
-}
-
-function testCredentials() {
-  chrome.runtime.sendMessage({ action: "TEST_CREDENTIALS" }, (resp) => {
-    if (!resp || !resp.success) {
-      showToast(`Gabim: ${resp?.error || "Asnjë përgjigje"}`, "error");
+  try {
+    const cId = spotifyClientId.value.trim();
+    const cSecret = spotifyClientSecret.value.trim();
+    let duration = parseInt(spotifyDuration.value.trim(), 10);
+    if (!duration || duration < 1) duration = 8;
+    if (!cId || !cSecret) {
+      showToast("Enter your Spotify Client ID and Secret.", "error");
       return;
     }
-    showToast("Kredencialet funksionojnë! ✅", "success");
-  });
+    const now = Date.now();
+    const expiresAt = now + duration * 3600000;
+    const userCredentials = { clientId: cId, clientSecret: cSecret, expiresAt };
+    const ytKey = youtubeApiKey.value.trim();
+    chrome.storage.local.set({ userCredentials, youtubeApiKey: ytKey }, () => {
+      if (chrome.runtime.lastError) {
+        showToast("Error saving options.", "error");
+      } else {
+        chrome.storage.local.remove("spotifyTokenData", () => {
+          showToast("Saved successfully! 🎉", "success");
+        });
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    showToast("Error saving options.", "error");
+  }
 }
 
-// Accordion
-let isAccordionOpen = false;
-credsAccordionHeader.addEventListener("click", () => {
-  isAccordionOpen = !isAccordionOpen;
-  if (isAccordionOpen) {
-    credsAccordionBody.style.display = "block";
-    accordionToggle.textContent = "–";
-  } else {
-    credsAccordionBody.style.display = "none";
-    accordionToggle.textContent = "+";
+function clearAll() {
+  try {
+    chrome.storage.local.remove(["userCredentials", "spotifyTokenData", "youtubeApiKey"], () => {
+      spotifyClientId.value = "";
+      spotifyClientSecret.value = "";
+      spotifyDuration.value = 8;
+      youtubeApiKey.value = "";
+      showToast("All credentials cleared. 🗑️", "success");
+    });
+  } catch (error) {
+    console.error(error);
+    showToast("Error clearing credentials.", "error");
   }
-});
+}
 
-saveOptionsBtn.addEventListener("click", saveOptions);
-clearCredsBtn.addEventListener("click", clearCredentials);
-testCredsBtn.addEventListener("click", testCredentials);
+function testSpotify() {
+  try {
+    chrome.runtime.sendMessage({ action: "TEST_CREDENTIALS" }, (resp) => {
+      if (!resp || !resp.success) {
+        showToast(`Error: ${resp?.error || "No response"}`, "error");
+      } else {
+        showToast("Spotify credentials are valid! 👍", "success");
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    showToast("Error testing credentials.", "error");
+  }
+}
 
+function toggleAccordion(header, body, key) {
+  try {
+    const isOpen = body.style.display === "block";
+    body.style.display = isOpen ? "none" : "block";
+    header.querySelector(".accordion-toggle").textContent = isOpen ? "+" : "–";
+    const states = JSON.parse(localStorage.getItem("accordionStates") || "{}");
+    states[key] = !isOpen;
+    localStorage.setItem("accordionStates", JSON.stringify(states));
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+spotifyAccordionHeader.addEventListener("click", () => { toggleAccordion(spotifyAccordionHeader, spotifyAccordionBody, "spotifyOpen"); });
+youtubeAccordionHeader.addEventListener("click", () => { toggleAccordion(youtubeAccordionHeader, youtubeAccordionBody, "youtubeOpen"); });
+saveBtn.addEventListener("click", saveOptions);
+clearBtn.addEventListener("click", clearAll);
+testBtn.addEventListener("click", testSpotify);
 loadOptions();

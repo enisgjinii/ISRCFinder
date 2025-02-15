@@ -1,73 +1,50 @@
 <!DOCTYPE html>
 <html lang="sq">
+
 <head>
   <meta charset="utf-8" />
-  <title>🎉 Kërkuesi i Avancuar Spotify (Cross-Browser)</title>
+  <title>Gjetësi YouTube → Spotify 🎶</title>
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
-  <div id="appContainer" class="container">
-    <img src="icons/logo.jpg" alt="Spotify Finder Logo" class="extension-logo" />
-    <h1 class="title">🎶 Kërkuesi i Avancuar i Spotify</h1>
-
-    <!-- Top bar: Dark Mode, Expand, Go to Options -->
-    <div class="flex-right margin-bottom">
-      <label class="dark-toggle" data-tooltip="Modaliteti i errët">
-        <input type="checkbox" id="darkModeToggle">
+  <div class="main-container">
+    <div class="top-bar">
+      <label class="dark-toggle" data-tooltip="Ndrysho Modalitetin e Errët">
+        <input type="checkbox" id="darkModeToggle" />
         <span class="slider"></span>
-        <span class="label-text">Errët</span>
       </label>
-      <button class="btn btn-blue" id="expandViewBtn" data-tooltip="Zgjero Pamjen e Popup-it">
-        Zgjero
-      </button>
-      <button class="btn btn-green" id="openOptionsBtn" data-tooltip="Hap Opsionet e Extension-it">
-        ⚙️ Opsionet
-      </button>
+      <button id="openOptionsBtn" class="btn btn-green" data-tooltip="Hap Opsionet">⚙️ Opsionet</button>
     </div>
-
-    <!-- Kartë: Zbulim nga Tab Aktiv -->
-    <div class="card">
-      <h2>1) Zbulim Faqe Aktuale 🕵️</h2>
-      <p class="small-note">Nëse jeni në Spotify track/album ose YouTube, provo këtu.</p>
-      <button class="btn btn-blue" id="detectCurrentTabBtn">Zbulo Linkun</button>
-      <button class="btn btn-purple" id="youtubeSimilarBtn">🔗 Youtube → Spotify</button>
-    </div>
-
-    <!-- Kartë: Lidhje (Track ose Album) -->
-    <div class="card">
-      <h2>2) Futni Lidhje (Track ose Album) 🔗</h2>
-      <p class="small-note">Vendosni disa URL (një për rresht). P.sh. <br/>
-        https://open.spotify.com/track/... <br/>
-        ose https://open.spotify.com/album/...
-      </p>
-      <textarea id="spotifyLinksInput" placeholder="https://open.spotify.com/track/...&#10;https://open.spotify.com/album/..."></textarea>
-      <div class="flex-left margin-top">
-        <button class="btn btn-green" id="fetchLinksBtn">Merr</button>
-        <button class="btn btn-gray" id="clearResultsBtn">Pastro</button>
+    <div id="inputSection" class="section">
+      <div class="card">
+        <h2 class="card-title">Vendos URL-në e YouTube 🔗</h2>
+        <input type="text" id="youtubeLinkInput" placeholder="https://www.youtube.com/watch?v=..." />
+        <button id="fetchYouTubeBtn" class="btn btn-purple">Merr Info nga YouTube ✨</button>
+        <div id="youtubeInfo" class="youtube-info" style="display: none;">
+          <h3>Titulli: 🎬</h3>
+          <p id="videoTitle" class="video-title"></p>
+          <h3>Përshkrimi: 📝</h3>
+          <div id="videoDescription" class="video-description"></div>
+        </div>
+        <h2 class="card-title margin-top">Kërko në Spotify me Titullin 🎶</h2>
+        <input type="text" id="spotifySearchInput" placeholder="Vendos titullin e këngës (ose modifiko)" />
+        <button id="searchSpotifyBtn" class="btn btn-blue">Kërko në Spotify 🔍</button>
+        <h2 class="card-title margin-top">Ose Vendos URL-në e Spotify Direkt 🔗</h2>
+        <textarea id="manualSpotifyInput" style="height:60px;" placeholder="Ngjit lidhjen e Spotify këtu..."></textarea>
+        <button id="fetchSpotifyLinksBtn" class="btn btn-purple">Merr Detajet nga Spotify ✨</button>
       </div>
     </div>
-
-    <!-- Kartë: Kërkim Këngë / Albume -->
-    <div class="card">
-      <h2>3) Kërko Këngë/Albume 🔎</h2>
-      <div class="flex-left margin-bottom">
-        <input type="text" id="searchTrackInput" placeholder="Kërko Këngë...">
-        <button class="btn btn-purple" id="searchTrackBtn">Këngë</button>
+    <div id="resultsSection" class="section">
+      <div class="card">
+        <h2 class="card-title">Rezultatet 📑</h2>
+        <button id="clearResultsBtn" class="btn btn-gray">Pastro Rezultatet 🗑️</button>
+        <div id="results" class="results"></div>
       </div>
-      <div class="flex-left">
-        <input type="text" id="searchAlbumInput" placeholder="Kërko Albume...">
-        <button class="btn btn-purple" id="searchAlbumBtn">Albume</button>
-      </div>
-      <div id="searchResults" class="search-results"></div>
     </div>
-
-    <!-- Rezultatet -->
-    <div id="results" class="results-container"></div>
   </div>
-
-  <!-- Toast Container -->
   <div id="toastContainer" class="toast-container"></div>
-
   <script src="popup.js"></script>
 </body>
+
 </html>

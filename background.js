@@ -1,190 +1,134 @@
-// background.js
-
 async function getUserCredentials() {
-  const { userCredentials } = await new Promise((resolve) =>
-    chrome.storage.local.get("userCredentials", resolve)
-  );
-
-  if (!userCredentials) {
-    throw new Error("Nuk ka kredenciale të Spotify të ruajtura.");
+  try {
+    const { userCredentials } = await new Promise((resolve, reject) =>
+      chrome.storage.local.get("userCredentials", (data) =>
+        chrome.runtime.lastError ? reject(chrome.runtime.lastError) : resolve(data)
+      )
+    );
+    if (!userCredentials) throw new Error("Spotify credentials are not set.");
+    const now = Date.now();
+    if (now > userCredentials.expiresAt) {
+      await new Promise((resolve) => chrome.storage.local.remove("userCredentials", resolve));
+      throw new Error("Spotify credentials have expired.");
+    }
+    return { clientId: userCredentials.clientId, clientSecret: userCredentials.clientSecret };
+  } catch (error) {
+    console.error("getUserCredentials:", error);
+    throw error;
   }
-  const now = Date.now();
-  if (now > userCredentials.expiresAt) {
-    await new Promise((resolve) => chrome.storage.local.remove("userCredentials", resolve));
-    throw new Error("Kredencialet e Spotify kanë skaduar.");
-  }
-  return {
-    clientId: userCredentials.clientId,
-    clientSecret: userCredentials.clientSecret
-  };
 }
 
 async function getSpotifyToken() {
-  const { spotifyTokenData } = await new Promise((resolve) =>
-    chrome.storage.local.get("spotifyTokenData", resolve)
-  );
-  const now = Date.now();
-
-  // If token is valid, return it
-  if (spotifyTokenData && spotifyTokenData.accessToken && now < spotifyTokenData.expiresAt) {
-    return spotifyTokenData.accessToken;
-  }
-
-  // Otherwise, request a new token
-  const { clientId, clientSecret } = await getUserCredentials();
-  const tokenUrl = "https://accounts.spotify.com/api/token";
-  const authHeader = btoa(`${clientId}:${clientSecret}`);
-
-  const response = await fetch(tokenUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      Authorization: `Basic ${authHeader}`
-    },
-    body: "grant_type=client_credentials"
-  });
-  const data = await response.json();
-  if (!response.ok || !data.access_token) {
-    throw new Error(`Gabim në marrjen e token-it: ${data.error || response.statusText}`);
-  }
-
-  const expiresInMs = data.expires_in * 1000;
-  const expiresAt = now + expiresInMs - 30000; // 30 sec buffer
-
-  await new Promise((resolve) =>
-    chrome.storage.local.set(
-      {
-        spotifyTokenData: {
-          accessToken: data.access_token,
-          expiresAt
-        }
+  try {
+    const { spotifyTokenData } = await new Promise((resolve, reject) =>
+      chrome.storage.local.get("spotifyTokenData", (data) =>
+        chrome.runtime.lastError ? reject(chrome.runtime.lastError) : resolve(data)
+      )
+    );
+    const now = Date.now();
+    if (spotifyTokenData && spotifyTokenData.accessToken && now < spotifyTokenData.expiresAt) {
+      return spotifyTokenData.accessToken;
+    }
+    const { clientId, clientSecret } = await getUserCredentials();
+    const tokenUrl = "https://accounts.spotify.com/api/token";
+    const authHeader = btoa(`${clientId}:${clientSecret}`);
+    const response = await fetch(tokenUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: `Basic ${authHeader}`
       },
-      resolve
-    )
-  );
-
-  return data.access_token;
+      body: "grant_type=client_credentials"
+    });
+    if (!response.ok) throw new Error(`Spotify token error: ${response.status}`);
+    const data = await response.json();
+    if (!data.access_token) throw new Error("No access token returned.");
+    const expiresAt = Date.now() + data.expires_in * 1000 - 30000;
+    await new Promise((resolve, reject) =>
+      chrome.storage.local.set({ spotifyTokenData: { accessToken: data.access_token, expiresAt } }, () =>
+        chrome.runtime.lastError ? reject(chrome.runtime.lastError) : resolve()
+      )
+    );
+    return data.access_token;
+  } catch (error) {
+    console.error("getSpotifyToken:", error);
+    throw error;
+  }
 }
 
-// Listen for messages from popup.js / options.js
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === "TEST_CREDENTIALS") {
-    (async () => {
-      try {
-        // Just attempt to get a token
-        await getSpotifyToken();
-        sendResponse({ success: true });
-      } catch (err) {
-        sendResponse({ success: false, error: err.message });
-      }
-    })();
-    return true;
-  }
-  else if (request.action === "GET_TRACK_DATA") {
-    (async () => {
-      try {
-        const trackId = request.trackId;
-        if (!trackId) throw new Error("Mungon ID e këngës.");
-        const token = await getSpotifyToken();
-
-        // Get track
-        const trackRes = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (!trackRes.ok) {
-          throw new Error(`Gabim track: ${trackRes.status}`);
+  try {
+    if (request.action === "TEST_CREDENTIALS") {
+      (async () => {
+        try {
+          await getSpotifyToken();
+          sendResponse({ success: true });
+        } catch (err) {
+          sendResponse({ success: false, error: err.message });
         }
-        const trackData = await trackRes.json();
-
-        // Audio features
-        let audioFeatures = null;
-        const featRes = await fetch(`https://api.spotify.com/v1/audio-features/${trackId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (featRes.ok) {
-          audioFeatures = await featRes.json();
+      })();
+      return true;
+    } else if (request.action === "GET_YOUTUBE_SNIPPET") {
+      (async () => {
+        try {
+          const videoId = request.videoId;
+          if (!videoId) throw new Error("Missing YouTube video ID.");
+          const { youtubeApiKey } = await new Promise((resolve, reject) =>
+            chrome.storage.local.get("youtubeApiKey", (data) =>
+              chrome.runtime.lastError ? reject(chrome.runtime.lastError) : resolve(data)
+            )
+          );
+          if (!youtubeApiKey) throw new Error("YouTube API Key is not set.");
+          const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${youtubeApiKey}`;
+          const res = await fetch(url);
+          if (!res.ok) throw new Error(`YouTube API error: ${res.status}`);
+          const data = await res.json();
+          sendResponse({ success: true, youtubeData: data });
+        } catch (err) {
+          console.error("GET_YOUTUBE_SNIPPET:", err);
+          sendResponse({ success: false, error: err.message });
         }
-
-        sendResponse({ success: true, trackData, audioFeatures });
-      } catch (err) {
-        sendResponse({ success: false, error: err.message });
-      }
-    })();
-    return true;
-  }
-  else if (request.action === "GET_ALBUM_DATA") {
-    (async () => {
-      try {
-        const albumId = request.albumId;
-        if (!albumId) throw new Error("Mungon ID e albumit.");
-        const token = await getSpotifyToken();
-
-        const albumRes = await fetch(`https://api.spotify.com/v1/albums/${albumId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (!albumRes.ok) {
-          throw new Error(`Gabim album: ${albumRes.status}`);
+      })();
+      return true;
+    } else if (request.action === "SEARCH_SPOTIFY_TRACKS") {
+      (async () => {
+        try {
+          const query = request.query;
+          if (!query) throw new Error("Missing search query.");
+          const token = await getSpotifyToken();
+          const url = `https://api.spotify.com/v1/search?type=track&q=${encodeURIComponent(query)}&limit=5`;
+          const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+          if (!res.ok) throw new Error(`Spotify search error: ${res.status}`);
+          const data = await res.json();
+          sendResponse({ success: true, searchData: data });
+        } catch (err) {
+          console.error("SEARCH_SPOTIFY_TRACKS:", err);
+          sendResponse({ success: false, error: err.message });
         }
-        const albumData = await albumRes.json();
-        sendResponse({ success: true, albumData });
-      } catch (err) {
-        sendResponse({ success: false, error: err.message });
-      }
-    })();
-    return true;
-  }
-  else if (request.action === "SEARCH_TRACKS") {
-    (async () => {
-      try {
-        const { query } = request;
-        if (!query) throw new Error("Mungon teksti i kërkimit të këngës.");
-        const token = await getSpotifyToken();
-
-        const url = `https://api.spotify.com/v1/search?type=track&q=${encodeURIComponent(query)}&limit=5`;
-        const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-        if (!res.ok) throw new Error(`Gabim track search: ${res.status}`);
-        const searchData = await res.json();
-        sendResponse({ success: true, searchData });
-      } catch (err) {
-        sendResponse({ success: false, error: err.message });
-      }
-    })();
-    return true;
-  }
-  else if (request.action === "SEARCH_ALBUMS") {
-    (async () => {
-      try {
-        const { query } = request;
-        if (!query) throw new Error("Mungon teksti i kërkimit të albumit.");
-        const token = await getSpotifyToken();
-
-        const url = `https://api.spotify.com/v1/search?type=album&q=${encodeURIComponent(query)}&limit=5`;
-        const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-        if (!res.ok) throw new Error(`Gabim album search: ${res.status}`);
-        const searchData = await res.json();
-        sendResponse({ success: true, searchData });
-      } catch (err) {
-        sendResponse({ success: false, error: err.message });
-      }
-    })();
-    return true;
-  }
-  else if (request.action === "GET_YOUTUBE_SIMILAR") {
-    (async () => {
-      try {
-        const { title } = request;
-        if (!title) throw new Error("Mungon titulli i videos YouTube.");
-        const token = await getSpotifyToken();
-
-        const url = `https://api.spotify.com/v1/search?type=track&q=${encodeURIComponent(title)}&limit=5`;
-        const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-        if (!res.ok) throw new Error(`Gabim YT->Spotify search: ${res.status}`);
-        const searchData = await res.json();
-        sendResponse({ success: true, searchData });
-      } catch (err) {
-        sendResponse({ success: false, error: err.message });
-      }
-    })();
-    return true;
+      })();
+      return true;
+    } else if (request.action === "GET_SPOTIFY_TRACK_DETAILS") {
+      (async () => {
+        try {
+          const trackId = request.trackId;
+          if (!trackId) throw new Error("Missing track ID.");
+          const token = await getSpotifyToken();
+          const trackRes = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, { headers: { Authorization: `Bearer ${token}` } });
+          if (!trackRes.ok) throw new Error(`Track fetch error: ${trackRes.status}`);
+          const trackData = await trackRes.json();
+          let audioFeatures = null;
+          const featRes = await fetch(`https://api.spotify.com/v1/audio-features/${trackId}`, { headers: { Authorization: `Bearer ${token}` } });
+          if (featRes.ok) audioFeatures = await featRes.json();
+          sendResponse({ success: true, trackData, audioFeatures });
+        } catch (err) {
+          console.error("GET_SPOTIFY_TRACK_DETAILS:", err);
+          sendResponse({ success: false, error: err.message });
+        }
+      })();
+      return true;
+    }
+  } catch (ex) {
+    console.error("Unhandled background error:", ex);
+    sendResponse({ success: false, error: "Unhandled background error" });
   }
 });

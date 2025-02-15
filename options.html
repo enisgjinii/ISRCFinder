@@ -1,41 +1,49 @@
 <!DOCTYPE html>
 <html lang="sq">
+
 <head>
   <meta charset="utf-8">
-  <title>⚙️ Opsionet e Avancuara</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>⚙️ Opsionet e Extension-it</title>
+  <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
   <div class="options-container">
     <h1 class="title">⚙️ Opsionet e Extension-it</h1>
-
     <div class="accordion">
-      <div class="accordion-header" id="credsAccordionHeader">
-        <h2>Kredencialet e Spotify</h2>
+      <div class="accordion-header" id="spotifyAccordionHeader">
+        <h2>🎧 Kredencialet e Spotify</h2>
         <span class="accordion-toggle">+</span>
       </div>
-      <div class="accordion-body" id="credsAccordionBody" style="display: none;">
-        <p class="small-note">Ruhet lokalisht (demonstrim) - jo e sigurt për prodhim.</p>
-
-        <label class="small-note">Client ID</label>
-        <input type="text" id="clientIdInput" placeholder="Vendos Client ID" />
-
-        <label class="small-note">Client Secret</label>
-        <input type="text" id="clientSecretInput" placeholder="Vendos Client Secret" />
-
-        <label class="small-note">Kohëzgjatja e Ruajtjes (orë)</label>
-        <input type="number" id="durationInput" placeholder="8" />
-
-        <div class="flex-left margin-top">
-          <button id="saveOptionsBtn" class="btn btn-green">💾 Ruaj</button>
-          <button id="clearCredsBtn" class="btn btn-gray">❌ Fshij</button>
-          <button id="testCredsBtn" class="btn btn-blue">✅ Testo</button>
-        </div>
+      <div class="accordion-body" id="spotifyAccordionBody" style="display: none;">
+        <p class="small-note">Ruajtura lokal (demo, jo të sigurta) 😊</p>
+        <label class="small-note">ID e Klientit</label>
+        <input type="text" id="spotifyClientId" placeholder="Vendosni ID e Klientit">
+        <label class="small-note">Sekreti i Klientit</label>
+        <input type="text" id="spotifyClientSecret" placeholder="Vendosni Sekretin e Klientit">
+        <label class="small-note">Kohëzgjatja e vlefshmërisë (orë)</label>
+        <input type="number" id="spotifyDuration" placeholder="8">
       </div>
     </div>
+    <div class="accordion">
+      <div class="accordion-header" id="youtubeAccordionHeader">
+        <h2>📺 Çelësi API i YouTube</h2>
+        <span class="accordion-toggle">+</span>
+      </div>
+      <div class="accordion-body" id="youtubeAccordionBody" style="display: none;">
+        <p class="small-note">Kërkohet për të dhënat e YouTube 🎥</p>
+        <label class="small-note">Çelësi API i YouTube</label>
+        <input type="text" id="youtubeApiKey" placeholder="Vendosni Çelësin API të YouTube">
+      </div>
+    </div>
+    <div class="flex-left margin-top">
+      <button class="btn btn-green" id="saveBtn">💾 Ruaj</button>
+      <button class="btn btn-gray" id="clearBtn">❌ Fshij</button>
+      <button class="btn btn-blue" id="testBtn">✅ Testo Spotify</button>
+    </div>
   </div>
-
   <div id="toastContainer" class="toast-container"></div>
   <script src="options.js"></script>
 </body>
+
 </html>
