@@ -2,41 +2,44 @@
 <html lang="sq">
 <head>
   <meta charset="utf-8" />
-  <title>🎉 Kërkuesi i Avancuar (Spotify + YouTube)</title>
+  <title>🎉 Kërkuesi i Avancuar Spotify (Cross-Browser)</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div id="appContainer" class="container">
-    <!-- Optional logo -->
-    <img src="icons/logo.jpg" alt="Logo" class="extension-logo" />
-    
-    <h1 class="title">🎶 Kërkuesi i Avancuar</h1>
+    <img src="icons/logo.jpg" alt="Spotify Finder Logo" class="extension-logo" />
+    <h1 class="title">🎶 Kërkuesi i Avancuar i Spotify</h1>
 
+    <!-- Top bar: Dark Mode, Expand, Go to Options -->
     <div class="flex-right margin-bottom">
       <label class="dark-toggle" data-tooltip="Modaliteti i errët">
         <input type="checkbox" id="darkModeToggle">
         <span class="slider"></span>
         <span class="label-text">Errët</span>
       </label>
-      <button class="btn btn-blue" id="expandViewBtn" data-tooltip="Zgjero Popup">
+      <button class="btn btn-blue" id="expandViewBtn" data-tooltip="Zgjero Pamjen e Popup-it">
         Zgjero
       </button>
-      <button class="btn btn-green" id="openOptionsBtn" data-tooltip="Opsionet">
+      <button class="btn btn-green" id="openOptionsBtn" data-tooltip="Hap Opsionet e Extension-it">
         ⚙️ Opsionet
       </button>
     </div>
 
-    <!-- Card: Detect current tab -->
+    <!-- Kartë: Zbulim nga Tab Aktiv -->
     <div class="card">
       <h2>1) Zbulim Faqe Aktuale 🕵️</h2>
-      <p class="small-note">Nëse jeni në Spotify ose YouTube, provo këtu.</p>
+      <p class="small-note">Nëse jeni në Spotify track/album ose YouTube, provo këtu.</p>
       <button class="btn btn-blue" id="detectCurrentTabBtn">Zbulo Linkun</button>
       <button class="btn btn-purple" id="youtubeSimilarBtn">🔗 Youtube → Spotify</button>
     </div>
 
-    <!-- Card: Spotify Links -->
+    <!-- Kartë: Lidhje (Track ose Album) -->
     <div class="card">
-      <h2>2) Fut Lidhje Spotify 🔗</h2>
+      <h2>2) Futni Lidhje (Track ose Album) 🔗</h2>
+      <p class="small-note">Vendosni disa URL (një për rresht). P.sh. <br/>
+        https://open.spotify.com/track/... <br/>
+        ose https://open.spotify.com/album/...
+      </p>
       <textarea id="spotifyLinksInput" placeholder="https://open.spotify.com/track/...&#10;https://open.spotify.com/album/..."></textarea>
       <div class="flex-left margin-top">
         <button class="btn btn-green" id="fetchLinksBtn">Merr</button>
@@ -44,33 +47,27 @@
       </div>
     </div>
 
-    <!-- Card: Spotify Search -->
+    <!-- Kartë: Kërkim Këngë / Albume -->
     <div class="card">
-      <h2>3) Kërko Spotify 🔎</h2>
+      <h2>3) Kërko Këngë/Albume 🔎</h2>
       <div class="flex-left margin-bottom">
-        <input type="text" id="searchTrackInput" placeholder="Kërko Këngë..." />
+        <input type="text" id="searchTrackInput" placeholder="Kërko Këngë...">
         <button class="btn btn-purple" id="searchTrackBtn">Këngë</button>
       </div>
       <div class="flex-left">
-        <input type="text" id="searchAlbumInput" placeholder="Kërko Albume..." />
+        <input type="text" id="searchAlbumInput" placeholder="Kërko Albume...">
         <button class="btn btn-purple" id="searchAlbumBtn">Albume</button>
       </div>
       <div id="searchResults" class="search-results"></div>
     </div>
 
-    <!-- Card: YouTube Links -->
-    <div class="card">
-      <h2>4) Fut Lidhje YouTube 🎬</h2>
-      <textarea id="youtubeLinksInput" placeholder="https://www.youtube.com/watch?v=..."></textarea>
-      <div class="flex-left margin-top">
-        <button class="btn btn-blue" id="fetchYoutubeBtn">Merr YT Info</button>
-      </div>
-    </div>
-
+    <!-- Rezultatet -->
     <div id="results" class="results-container"></div>
   </div>
 
+  <!-- Toast Container -->
   <div id="toastContainer" class="toast-container"></div>
+
   <script src="popup.js"></script>
 </body>
 </html>

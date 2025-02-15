@@ -1,8 +1,7 @@
 /* style.css */
 
-/* Global Base */
-html,
-body {
+/* Basic reset / layout */
+html, body {
   margin: 0;
   padding: 0;
   font-family: sans-serif;
@@ -10,6 +9,8 @@ body {
   background: linear-gradient(135deg, #f8f9fa, #eef1f4);
   color: #333;
 }
+
+/* Container for popup pages */
 .container {
   padding: 10px;
 }
@@ -19,40 +20,28 @@ body {
   font-size: 18px;
 }
 
-/* Options container */
+/* Container for Options page */
 .options-container {
   max-width: 500px;
   margin: 20px auto;
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255,255,255,0.7);
   border-radius: 8px;
   padding: 16px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-}
-
-/* Logo */
-.extension-logo {
-  display: block;
-  margin: 0 auto;
-  margin-bottom: 12px;
-  width: 80px;
-  height: 80px;
-  object-fit: cover;
-  border-radius: 50%;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
 }
 
 /* Cards */
 .card {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255,255,255,0.9);
   border-radius: 6px;
   padding: 8px 10px;
   margin-bottom: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
   transition: transform 0.3s, box-shadow 0.3s;
 }
 .card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
 /* Buttons */
@@ -104,14 +93,13 @@ textarea {
   border-radius: 4px;
   transition: border-color 0.3s, box-shadow 0.3s;
 }
-input:focus,
-textarea:focus {
+input:focus, textarea:focus {
   outline: none;
   border-color: #2196f3;
-  box-shadow: 0 0 4px rgba(33, 150, 243, 0.3);
+  box-shadow: 0 0 4px rgba(33,150,243,0.3);
 }
 
-/* Flex helpers */
+/* Flex layout helpers */
 .flex-right {
   display: flex;
   justify-content: flex-end;
@@ -132,7 +120,7 @@ textarea:focus {
   color: #666;
 }
 
-/* Toast */
+/* Toast messages */
 .toast-container {
   position: fixed;
   bottom: 10px;
@@ -171,36 +159,30 @@ textarea:focus {
   animation: fadeSlideOut 0.5s forwards;
 }
 @keyframes fadeSlideIn {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  to { opacity: 1; transform: translateY(0); }
 }
 @keyframes fadeSlideOut {
-  to {
-    opacity: 0;
-    transform: translateY(20px);
-  }
+  to { opacity: 0; transform: translateY(20px); }
 }
 
-/* Results */
-.results-container {
-  margin-top: 10px;
-}
+/* Results containers */
+.results-container { margin-top: 10px; }
 .track-result {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255,255,255,0.9);
   padding: 8px;
   margin-bottom: 8px;
   border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  position: relative;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
   transition: transform 0.3s, box-shadow 0.3s;
 }
 .track-result:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 .track-title {
-  margin: 0 0 8px 0;
+  margin-top: 0;
+  margin-bottom: 8px;
   font-size: 14px;
   font-weight: bold;
 }
@@ -215,21 +197,19 @@ textarea:focus {
 .audio-features p {
   margin: 4px 0;
 }
+
+/* Animations */
 .slide-in {
   animation: slideIn 0.4s ease-out;
 }
 @keyframes slideIn {
-  0% {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
+
+/* Search results styling */
 .search-results .search-result-item {
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255,255,255,0.8);
   padding: 6px;
   border-radius: 4px;
   margin-bottom: 4px;
@@ -240,23 +220,23 @@ textarea:focus {
 }
 .search-result-item:hover {
   transform: translateX(2px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
-/* Dark Mode */
+/* Dark mode */
 .dark-mode body,
 .dark-mode .container {
   background: linear-gradient(135deg, #2f2f2f, #1c1c1c);
   color: #ccc;
 }
 .dark-mode .card {
-  background: rgba(50, 50, 50, 0.9);
+  background: rgba(50,50,50,0.9);
 }
 .dark-mode .track-result {
-  background: rgba(60, 60, 60, 0.9);
+  background: rgba(60,60,60,0.9);
 }
 .dark-mode .search-result-item {
-  background: rgba(80, 80, 80, 0.8);
+  background: rgba(80,80,80,0.8);
 }
 .dark-mode input,
 .dark-mode textarea {
@@ -278,13 +258,11 @@ textarea:focus {
 }
 .dark-toggle input {
   position: absolute;
-  width: 0;
-  height: 0;
+  width: 0; height: 0;
   opacity: 0;
 }
 .slider {
-  width: 40px;
-  height: 20px;
+  width: 40px; height: 20px;
   background-color: #ccc;
   border-radius: 20px;
   margin-right: 4px;
@@ -294,10 +272,8 @@ textarea:focus {
 .slider:before {
   content: "";
   position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 16px;
-  height: 16px;
+  top: 2px; left: 2px;
+  width: 16px; height: 16px;
   background: #fff;
   border-radius: 50%;
   transition: transform 0.3s;
@@ -312,7 +288,7 @@ textarea:focus {
   font-size: 14px;
 }
 
-/* Expanded Popup */
+/* Expanded popup */
 .expanded-popup {
   width: 600px !important;
   height: 700px !important;
@@ -334,12 +310,12 @@ textarea:focus {
   bottom: -28px;
 }
 
-/* Accordion */
+/* Accordion (in Options) */
 .accordion {
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255,255,255,0.8);
   border-radius: 6px;
   margin-bottom: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 .accordion-header {
   display: flex;
@@ -350,7 +326,7 @@ textarea:focus {
   transition: background-color 0.3s;
 }
 .accordion-header:hover {
-  background-color: rgba(240, 240, 240, 0.8);
+  background-color: rgba(240,240,240,0.8);
 }
 .accordion-toggle {
   font-weight: bold;
@@ -360,8 +336,19 @@ textarea:focus {
   padding: 10px;
 }
 .dark-mode .accordion {
-  background-color: rgba(70, 70, 70, 0.8);
+  background-color: rgba(70,70,70,0.8);
 }
 .dark-mode .accordion-header:hover {
-  background-color: rgba(90, 90, 90, 0.7);
+  background-color: rgba(90,90,90,0.7);
+}
+/* Example styling for the new logo */
+.extension-logo {
+  display: block;
+  margin: 0 auto;
+  margin-bottom: 12px;
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }

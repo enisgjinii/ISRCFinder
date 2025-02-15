@@ -1,16 +1,22 @@
 {
   "manifest_version": 2,
-  "name": "Kërkuesi i Avancuar i Metadatave (Spotify & YouTube)",
-  "description": "Gjeni ISRC, UPC nga Spotify dhe merr të dhëna nga YouTube (titulli, përshkrimi, kohëzgjatja) – një codebase për Firefox, Chrome & Edge!",
-  "version": "1.0.1",
+  "name": "Kërkuesi i Avancuar i Metadatave Spotify (Cross-Browser)",
+  "description": "Find ISRC, UPC, Audio Features, album info, with one codebase for Firefox/Chrome/Edge!",
+  "version": "1.0.0",
+
   "permissions": [
     "storage",
     "activeTab",
     "tabs",
     "*://api.spotify.com/*",
-    "*://accounts.spotify.com/*",
-    "*://www.googleapis.com/*"
+    "*://accounts.spotify.com/*"
   ],
+
+  "icons": {
+    "16": "icons/logo16.png",
+    "48": "icons/logo48.png",
+    "128": "icons/logo128.png"
+  },
   "browser_action": {
     "default_popup": "popup.html"
   },
@@ -18,18 +24,16 @@
     "page": "options.html",
     "open_in_tab": true
   },
+
   "background": {
     "scripts": ["background.js"],
     "persistent": true
   },
+
   "browser_specific_settings": {
     "gecko": {
-      "id": "spotify-yt-meta-finder@example.com",
+      "id": "spotify-meta-finder@example.com",
       "strict_min_version": "57.0"
     }
-  },
-  "icons": {
-    "48": "icons/logo48.png",
-    "128": "icons/logo128.png"
   }
 }
