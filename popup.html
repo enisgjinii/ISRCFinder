@@ -7,10 +7,9 @@
 </head>
 <body>
   <div id="appContainer" class="container">
-
-    <!-- Optional Logo -->
+    <!-- Optional logo -->
     <img src="icons/logo.jpg" alt="Logo" class="extension-logo" />
-
+    
     <h1 class="title">🎶 Kërkuesi i Avancuar</h1>
 
     <div class="flex-right margin-bottom">
@@ -27,39 +26,39 @@
       </button>
     </div>
 
-    <!-- Spotify detection or YouTube detection -->
+    <!-- Card: Detect current tab -->
     <div class="card">
       <h2>1) Zbulim Faqe Aktuale 🕵️</h2>
-      <p class="small-note">Nëse jeni në Spotify ose YouTube, provo butonat.</p>
-      <button class="btn btn-blue" id="detectCurrentTabBtn">Zbulo Linkun (Spotify/YouTube)</button>
+      <p class="small-note">Nëse jeni në Spotify ose YouTube, provo këtu.</p>
+      <button class="btn btn-blue" id="detectCurrentTabBtn">Zbulo Linkun</button>
       <button class="btn btn-purple" id="youtubeSimilarBtn">🔗 Youtube → Spotify</button>
     </div>
 
-    <!-- Kartë: Lidhje Spotify -->
+    <!-- Card: Spotify Links -->
     <div class="card">
       <h2>2) Fut Lidhje Spotify 🔗</h2>
-      <textarea id="spotifyLinksInput" placeholder="https://open.spotify.com/track/...&#10;..."></textarea>
+      <textarea id="spotifyLinksInput" placeholder="https://open.spotify.com/track/...&#10;https://open.spotify.com/album/..."></textarea>
       <div class="flex-left margin-top">
         <button class="btn btn-green" id="fetchLinksBtn">Merr</button>
         <button class="btn btn-gray" id="clearResultsBtn">Pastro</button>
       </div>
     </div>
 
-    <!-- Kartë: Kërkim Këngë / Albume (Spotify) -->
+    <!-- Card: Spotify Search -->
     <div class="card">
       <h2>3) Kërko Spotify 🔎</h2>
       <div class="flex-left margin-bottom">
-        <input type="text" id="searchTrackInput" placeholder="Këngë...">
+        <input type="text" id="searchTrackInput" placeholder="Kërko Këngë..." />
         <button class="btn btn-purple" id="searchTrackBtn">Këngë</button>
       </div>
       <div class="flex-left">
-        <input type="text" id="searchAlbumInput" placeholder="Albume...">
+        <input type="text" id="searchAlbumInput" placeholder="Kërko Albume..." />
         <button class="btn btn-purple" id="searchAlbumBtn">Albume</button>
       </div>
       <div id="searchResults" class="search-results"></div>
     </div>
 
-    <!-- Kartë: Lidhje YouTube -->
+    <!-- Card: YouTube Links -->
     <div class="card">
       <h2>4) Fut Lidhje YouTube 🎬</h2>
       <textarea id="youtubeLinksInput" placeholder="https://www.youtube.com/watch?v=..."></textarea>

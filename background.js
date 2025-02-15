@@ -5,12 +5,14 @@ async function getUserCredentials() {
     chrome.storage.local.get("userCredentials", resolve)
   );
   if (!userCredentials) {
-    throw new Error("S'ka kredenciale të Spotify të ruajtura.");
+    throw new Error("S'ka kredenciale Spotify të ruajtura.");
   }
   const now = Date.now();
   if (now > userCredentials.expiresAt) {
-    await new Promise((resolve) => chrome.storage.local.remove("userCredentials", resolve));
-    throw new Error("Kredencialet e Spotify kanë skaduar.");
+    await new Promise((resolve) =>
+      chrome.storage.local.remove("userCredentials", resolve)
+    );
+    throw new Error("Kredencialet Spotify kanë skaduar.");
   }
   return {
     clientId: userCredentials.clientId,
@@ -18,14 +20,17 @@ async function getUserCredentials() {
   };
 }
 
-// For Spotify
 async function getSpotifyToken() {
   const { spotifyTokenData } = await new Promise((resolve) =>
     chrome.storage.local.get("spotifyTokenData", resolve)
   );
   const now = Date.now();
 
-  if (spotifyTokenData && spotifyTokenData.accessToken && now < spotifyTokenData.expiresAt) {
+  if (
+    spotifyTokenData &&
+    spotifyTokenData.accessToken &&
+    now < spotifyTokenData.expiresAt
+  ) {
     return spotifyTokenData.accessToken;
   }
 
@@ -63,7 +68,6 @@ async function getSpotifyToken() {
   return data.access_token;
 }
 
-// For YouTube
 async function getYoutubeApiKey() {
   const { youtubeApiKey } = await new Promise((resolve) =>
     chrome.storage.local.get("youtubeApiKey", resolve)
@@ -74,39 +78,19 @@ async function getYoutubeApiKey() {
   return youtubeApiKey;
 }
 
-// Helper to parse ISO 8601 Duration (e.g. "PT4M13S") -> "HH:MM:SS"
+// Helper: Parse ISO 8601 duration (e.g., "PT1H2M10S") to "HH:MM:SS"
 function parseIso8601Duration(duration) {
-  // Typically like "PT4M13S", or "PT1H2M10S"
-  // We'll create a simple parse
   const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
   if (!match) return "00:00:00";
-
   const hours = parseInt(match[1] || "0", 10);
   const minutes = parseInt(match[2] || "0", 10);
   const seconds = parseInt(match[3] || "0", 10);
-
-  const hh = hours.toString().padStart(2, "0");
-  const mm = minutes.toString().padStart(2, "0");
-  const ss = seconds.toString().padStart(2, "0");
-
-  return `${hh}:${mm}:${ss}`;
+  return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 }
 
-// Helper to parse description lines
-// We want: 
-// Music & Produced : ...
-// Text : ...
-// Video : ...
-// Special Guest : ...
-// Thanks to : ...
-// Publisher : ...
-// Licensing : ...
-// Also want to see if "ISRC" or "UPC" appear
+// Helper: Parse description lines for specific fields
 function parseYoutubeDescription(desc) {
-  // We'll look line by line
-  const lines = desc.split("\n").map((l) => l.trim()).filter(Boolean);
-
-  // We'll store the final object
+  const lines = desc.split("\n").map(l => l.trim()).filter(Boolean);
   const parsed = {
     musicProduced: null,
     text: null,
@@ -115,14 +99,12 @@ function parseYoutubeDescription(desc) {
     thanksTo: null,
     publisher: null,
     licensing: null,
-    isrc: null,
-    upc: null
+    isrc: "N/A",
+    upc: "N/A"
   };
-
   for (const line of lines) {
     const lower = line.toLowerCase();
-
-    if (lower.startsWith("music & produced")) {
+    if (lower.startsWith("music") && lower.includes("produced")) {
       parsed.musicProduced = line.split(":")[1]?.trim() || line.trim();
     } else if (lower.startsWith("text")) {
       parsed.text = line.split(":")[1]?.trim() || line.trim();
@@ -137,20 +119,16 @@ function parseYoutubeDescription(desc) {
     } else if (lower.startsWith("licensing")) {
       parsed.licensing = line.split(":")[1]?.trim() || line.trim();
     }
-
-    // Try to find "ISRC" or "UPC" in lines
+    // Try to find ISRC or UPC explicitly in the description
     if (lower.includes("isrc")) {
-      // E.g. "ISRC : US-ABC-20-12345"
       const after = line.split("ISRC")[1] || "";
-      parsed.isrc = after.replace(":", "").trim() || "Found mention of ISRC but not parseable";
+      parsed.isrc = after.replace(":", "").trim() || parsed.isrc;
     }
     if (lower.includes("upc")) {
       const after = line.split("UPC")[1] || "";
-      parsed.upc = after.replace(":", "").trim() || "Found mention of UPC but not parseable";
+      parsed.upc = after.replace(":", "").trim() || parsed.upc;
     }
   }
-
-  // Now we return it
   return parsed;
 }
 
@@ -158,7 +136,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "TEST_CREDENTIALS") {
     (async () => {
       try {
-        // Try to get Spotify token
         await getSpotifyToken();
         sendResponse({ success: true });
       } catch (err) {
@@ -167,21 +144,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     })();
     return true;
   }
-
-  // ========== SPOTIFY ACTIONS ==========
   else if (request.action === "GET_TRACK_DATA") {
     (async () => {
       try {
         const trackId = request.trackId;
         if (!trackId) throw new Error("Mungon ID e këngës.");
         const token = await getSpotifyToken();
-
         const trackRes = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (!trackRes.ok) throw new Error(`Gabim track: ${trackRes.status}`);
         const trackData = await trackRes.json();
-
         let audioFeatures = null;
         const featRes = await fetch(`https://api.spotify.com/v1/audio-features/${trackId}`, {
           headers: { Authorization: `Bearer ${token}` }
@@ -189,7 +162,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (featRes.ok) {
           audioFeatures = await featRes.json();
         }
-
         sendResponse({ success: true, trackData, audioFeatures });
       } catch (err) {
         sendResponse({ success: false, error: err.message });
@@ -203,13 +175,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const albumId = request.albumId;
         if (!albumId) throw new Error("Mungon ID e albumit.");
         const token = await getSpotifyToken();
-
-        const res = await fetch(`https://api.spotify.com/v1/albums/${albumId}`, {
+        const albumRes = await fetch(`https://api.spotify.com/v1/albums/${albumId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        if (!res.ok) throw new Error(`Gabim album: ${res.status}`);
-        const albumData = await res.json();
-
+        if (!albumRes.ok) throw new Error(`Gabim album: ${albumRes.status}`);
+        const albumData = await albumRes.json();
         sendResponse({ success: true, albumData });
       } catch (err) {
         sendResponse({ success: false, error: err.message });
@@ -223,12 +193,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const { query } = request;
         if (!query) throw new Error("Mungon teksti i kërkimit të këngës.");
         const token = await getSpotifyToken();
-
         const url = `https://api.spotify.com/v1/search?type=track&q=${encodeURIComponent(query)}&limit=5`;
         const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
         if (!res.ok) throw new Error(`Gabim track search: ${res.status}`);
         const searchData = await res.json();
-
         sendResponse({ success: true, searchData });
       } catch (err) {
         sendResponse({ success: false, error: err.message });
@@ -242,12 +210,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const { query } = request;
         if (!query) throw new Error("Mungon teksti i kërkimit të albumit.");
         const token = await getSpotifyToken();
-
         const url = `https://api.spotify.com/v1/search?type=album&q=${encodeURIComponent(query)}&limit=5`;
         const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
         if (!res.ok) throw new Error(`Gabim album search: ${res.status}`);
         const searchData = await res.json();
-
         sendResponse({ success: true, searchData });
       } catch (err) {
         sendResponse({ success: false, error: err.message });
@@ -257,7 +223,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
   else if (request.action === "GET_YOUTUBE_SIMILAR") {
     (async () => {
-      // same logic from previous example for YouTube→Spotify
       try {
         const { title } = request;
         if (!title) throw new Error("Mungon titulli i videos.");
@@ -273,43 +238,48 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     })();
     return true;
   }
-
-  // ========== YOUTUBE ACTION FOR VIDEO DATA ==========
   else if (request.action === "GET_YOUTUBE_VIDEO_DATA") {
     (async () => {
       try {
         const { videoId } = request;
-        if (!videoId) throw new Error("Mungon ID i videos.");
+        if (!videoId) throw new Error("Mungon ID e videos.");
         const apiKey = await getYoutubeApiKey();
-
-        // e.g. "https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=VIDEO_ID&key=YOUR_API_KEY"
         const endpoint = `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoId}&key=${apiKey}`;
         const resp = await fetch(endpoint);
-        if (!resp.ok) {
-          throw new Error(`Gabim YouTube Data API: ${resp.status}`);
-        }
+        if (!resp.ok) throw new Error(`Gabim YouTube API: ${resp.status}`);
         const data = await resp.json();
-        if (!data.items || !data.items.length) {
-          throw new Error("Video nuk u gjet nga YouTube Data API.");
-        }
+        if (!data.items || !data.items.length) throw new Error("Video nuk u gjet nga YouTube.");
         const video = data.items[0];
         const snippet = video.snippet || {};
         const contentDetails = video.contentDetails || {};
-
         const title = snippet.title || "Pa Titull";
         const description = snippet.description || "";
         const isoDuration = contentDetails.duration || "PT0S";
-        const hhmmss = parseIso8601Duration(isoDuration);
+        const durationFormatted = parseIso8601Duration(isoDuration);
+        let parsedDesc = parseYoutubeDescription(description);
 
-        // Parse the lines from the description
-        const parsedDesc = parseYoutubeDescription(description);
-
+        // If ISRC is missing, search Spotify by the cleaned title.
+        if (!parsedDesc.isrc || parsedDesc.isrc === "N/A") {
+          // Remove any bracketed parts from title
+          const cleanedTitle = title.replace(/\(.*?\)/g, "").trim();
+          const token = await getSpotifyToken();
+          const searchUrl = `https://api.spotify.com/v1/search?type=track&q=${encodeURIComponent(cleanedTitle)}&limit=1`;
+          const searchRes = await fetch(searchUrl, { headers: { Authorization: `Bearer ${token}` } });
+          if (searchRes.ok) {
+            const searchData = await searchRes.json();
+            if (searchData.tracks && searchData.tracks.items.length > 0) {
+              const trackData = searchData.tracks.items[0];
+              parsedDesc.isrc = trackData.external_ids?.isrc || "N/A";
+              parsedDesc.upc = trackData.album?.external_ids?.upc || "N/A";
+            }
+          }
+        }
         sendResponse({
           success: true,
           videoData: {
             videoId,
             title,
-            duration: hhmmss,
+            duration: durationFormatted,
             descriptionLines: parsedDesc
           }
         });

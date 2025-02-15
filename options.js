@@ -24,14 +24,12 @@ const ytAccToggle = ytAccordionHeader.querySelector(".accordion-toggle");
 
 const toastContainer = document.getElementById("toastContainer");
 
-// ===== TOAST =====
 function showToast(message, type = "info") {
   const toast = document.createElement("div");
   toast.classList.add("toast", "fade-in");
   if (type === "success") toast.classList.add("toast-success");
   else if (type === "error") toast.classList.add("toast-error");
   toast.textContent = message;
-
   toastContainer.appendChild(toast);
   setTimeout(() => {
     toast.classList.remove("fade-in");
@@ -40,41 +38,36 @@ function showToast(message, type = "info") {
   }, 3000);
 }
 
-// ===== LOAD OPTIONS =====
 function loadOptions() {
   chrome.storage.local.get(["userCredentials", "youtubeApiKey"], (data) => {
     const userCredentials = data.userCredentials;
     if (userCredentials) {
       clientIdInput.value = userCredentials.clientId;
       clientSecretInput.value = userCredentials.clientSecret;
-      let hoursLeft = Math.floor((userCredentials.expiresAt - Date.now()) / (3600*1000));
+      let hoursLeft = Math.floor((userCredentials.expiresAt - Date.now()) / (3600 * 1000));
       if (hoursLeft < 1) hoursLeft = 8;
       durationInput.value = hoursLeft;
     } else {
       durationInput.value = 8;
     }
-
     if (data.youtubeApiKey) {
       ytApiKeyInput.value = data.youtubeApiKey;
     }
   });
 }
 
-// ===== SAVE SPOTIFY CREDS =====
 function saveOptions() {
   const cId = clientIdInput.value.trim();
   const cSecret = clientSecretInput.value.trim();
   let hrs = parseInt(durationInput.value.trim(), 10);
   if (!hrs || hrs < 1) hrs = 8;
-
   if (!cId || !cSecret) {
-    showToast("Vendosni Client ID/Secret (Spotify).", "error");
+    showToast("Ju lutem vendosni Client ID dhe Secret (Spotify).", "error");
     return;
   }
   const now = Date.now();
   const expiresAt = now + hrs * 3600 * 1000;
   const userCredentials = { clientId: cId, clientSecret: cSecret, expiresAt };
-
   chrome.storage.local.set({ userCredentials }, () => {
     chrome.storage.local.remove("spotifyTokenData", () => {
       showToast(`U ruajtën kredencialet Spotify për ${hrs} orë.`, "success");
@@ -82,28 +75,25 @@ function saveOptions() {
   });
 }
 
-// ===== CLEAR SPOTIFY CREDS =====
 function clearCredentials() {
   chrome.storage.local.remove(["userCredentials", "spotifyTokenData"], () => {
     clientIdInput.value = "";
     clientSecretInput.value = "";
     durationInput.value = "8";
-    showToast("Kredencialet e Spotify u fshinë.", "success");
+    showToast("Kredencialet Spotify u fshinë.", "success");
   });
 }
 
-// ===== TEST SPOTIFY CREDS =====
 function testCredentials() {
   chrome.runtime.sendMessage({ action: "TEST_CREDENTIALS" }, (resp) => {
     if (!resp || !resp.success) {
-      showToast(`Gabim: ${resp?.error || "No resp"}`, "error");
+      showToast(`Gabim: ${resp?.error || "Asnjë përgjigje"}`, "error");
       return;
     }
     showToast("Kredencialet Spotify funksionojnë! ✅", "success");
   });
 }
 
-// ===== SAVE YOUTUBE KEY =====
 function saveYtKey() {
   const key = ytApiKeyInput.value.trim();
   if (!key) {
@@ -111,19 +101,17 @@ function saveYtKey() {
     return;
   }
   chrome.storage.local.set({ youtubeApiKey: key }, () => {
-    showToast("U ruajt YouTube API Key!", "success");
+    showToast("YouTube API Key u ruajt!", "success");
   });
 }
 
-// ===== CLEAR YOUTUBE KEY =====
 function clearYtKey() {
   chrome.storage.local.remove("youtubeApiKey", () => {
     ytApiKeyInput.value = "";
-    showToast("Fshijti YouTube API Key.", "success");
+    showToast("YouTube API Key u fshinë.", "success");
   });
 }
 
-// ===== ACCORDION TOGGLES =====
 let isAccordionOpen = false;
 credsAccordionHeader.addEventListener("click", () => {
   isAccordionOpen = !isAccordionOpen;
@@ -148,11 +136,9 @@ ytAccordionHeader.addEventListener("click", () => {
   }
 });
 
-// ===== EVENT LISTENERS =====
 saveOptionsBtn.addEventListener("click", saveOptions);
 clearCredsBtn.addEventListener("click", clearCredentials);
 testCredsBtn.addEventListener("click", testCredentials);
-
 saveYtKeyBtn.addEventListener("click", saveYtKey);
 clearYtKeyBtn.addEventListener("click", clearYtKey);
 

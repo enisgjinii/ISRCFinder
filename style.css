@@ -1,8 +1,8 @@
 /* style.css */
 
-/* Basic backgrounds/gradients, etc. from previous examples */
-
-html, body {
+/* Global Base */
+html,
+body {
   margin: 0;
   padding: 0;
   font-family: sans-serif;
@@ -23,13 +23,13 @@ html, body {
 .options-container {
   max-width: 500px;
   margin: 20px auto;
-  background: rgba(255,255,255,0.7);
+  background: rgba(255, 255, 255, 0.7);
   border-radius: 8px;
   padding: 16px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
-/* Example for the extension logo */
+/* Logo */
 .extension-logo {
   display: block;
   margin: 0 auto;
@@ -38,24 +38,24 @@ html, body {
   height: 80px;
   object-fit: cover;
   border-radius: 50%;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-/* Cards, buttons, inputs, toasts, dark mode, etc. from the previous advanced style */
-
+/* Cards */
 .card {
-  background: rgba(255,255,255,0.9);
+  background: rgba(255, 255, 255, 0.9);
   border-radius: 6px;
   padding: 8px 10px;
   margin-bottom: 12px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   transition: transform 0.3s, box-shadow 0.3s;
 }
 .card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
+/* Buttons */
 .btn {
   padding: 6px 10px;
   border: none;
@@ -91,7 +91,9 @@ html, body {
   padding: 3px 6px;
 }
 
+/* Inputs */
 input[type="text"],
+input[type="number"],
 textarea {
   width: 100%;
   box-sizing: border-box;
@@ -102,10 +104,32 @@ textarea {
   border-radius: 4px;
   transition: border-color 0.3s, box-shadow 0.3s;
 }
-input:focus, textarea:focus {
+input:focus,
+textarea:focus {
   outline: none;
   border-color: #2196f3;
-  box-shadow: 0 0 4px rgba(33,150,243,0.3);
+  box-shadow: 0 0 4px rgba(33, 150, 243, 0.3);
+}
+
+/* Flex helpers */
+.flex-right {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+.flex-left {
+  display: flex;
+  align-items: center;
+}
+.margin-bottom {
+  margin-bottom: 8px;
+}
+.margin-top {
+  margin-top: 8px;
+}
+.small-note {
+  font-size: 12px;
+  color: #666;
 }
 
 /* Toast */
@@ -147,31 +171,36 @@ input:focus, textarea:focus {
   animation: fadeSlideOut 0.5s forwards;
 }
 @keyframes fadeSlideIn {
-  to { opacity: 1; transform: translateY(0); }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 @keyframes fadeSlideOut {
-  to { opacity: 0; transform: translateY(20px); }
+  to {
+    opacity: 0;
+    transform: translateY(20px);
+  }
 }
 
+/* Results */
 .results-container {
   margin-top: 10px;
 }
 .track-result {
-  background: rgba(255,255,255,0.9);
+  background: rgba(255, 255, 255, 0.9);
   padding: 8px;
   margin-bottom: 8px;
   border-radius: 6px;
-  position: relative;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   transition: transform 0.3s, box-shadow 0.3s;
 }
 .track-result:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 .track-title {
-  margin-top: 0;
-  margin-bottom: 8px;
+  margin: 0 0 8px 0;
   font-size: 14px;
   font-weight: bold;
 }
@@ -190,11 +219,17 @@ input:focus, textarea:focus {
   animation: slideIn 0.4s ease-out;
 }
 @keyframes slideIn {
-  0% { opacity: 0; transform: translateY(10px); }
-  100% { opacity: 1; transform: translateY(0); }
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .search-results .search-result-item {
-  background: rgba(255,255,255,0.8);
+  background: rgba(255, 255, 255, 0.8);
   padding: 6px;
   border-radius: 4px;
   margin-bottom: 4px;
@@ -205,7 +240,7 @@ input:focus, textarea:focus {
 }
 .search-result-item:hover {
   transform: translateX(2px);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 /* Dark Mode */
@@ -215,13 +250,13 @@ input:focus, textarea:focus {
   color: #ccc;
 }
 .dark-mode .card {
-  background: rgba(50,50,50,0.9);
+  background: rgba(50, 50, 50, 0.9);
 }
 .dark-mode .track-result {
-  background: rgba(60,60,60,0.9);
+  background: rgba(60, 60, 60, 0.9);
 }
 .dark-mode .search-result-item {
-  background: rgba(80,80,80,0.8);
+  background: rgba(80, 80, 80, 0.8);
 }
 .dark-mode input,
 .dark-mode textarea {
@@ -233,7 +268,7 @@ input:focus, textarea:focus {
   color: #aaa;
 }
 
-/* Toggle switch */
+/* Toggle Switch */
 .dark-toggle {
   position: relative;
   display: inline-flex;
@@ -243,11 +278,13 @@ input:focus, textarea:focus {
 }
 .dark-toggle input {
   position: absolute;
-  width: 0; height: 0;
+  width: 0;
+  height: 0;
   opacity: 0;
 }
 .slider {
-  width: 40px; height: 20px;
+  width: 40px;
+  height: 20px;
   background-color: #ccc;
   border-radius: 20px;
   margin-right: 4px;
@@ -257,8 +294,10 @@ input:focus, textarea:focus {
 .slider:before {
   content: "";
   position: absolute;
-  top: 2px; left: 2px;
-  width: 16px; height: 16px;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
   background: #fff;
   border-radius: 50%;
   transition: transform 0.3s;
@@ -273,7 +312,7 @@ input:focus, textarea:focus {
   font-size: 14px;
 }
 
-/* Expanded popup */
+/* Expanded Popup */
 .expanded-popup {
   width: 600px !important;
   height: 700px !important;
@@ -295,12 +334,12 @@ input:focus, textarea:focus {
   bottom: -28px;
 }
 
-/* Accordion in Options */
+/* Accordion */
 .accordion {
-  background: rgba(255,255,255,0.8);
+  background: rgba(255, 255, 255, 0.8);
   border-radius: 6px;
   margin-bottom: 16px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 .accordion-header {
   display: flex;
@@ -311,7 +350,7 @@ input:focus, textarea:focus {
   transition: background-color 0.3s;
 }
 .accordion-header:hover {
-  background-color: rgba(240,240,240,0.8);
+  background-color: rgba(240, 240, 240, 0.8);
 }
 .accordion-toggle {
   font-weight: bold;
@@ -321,8 +360,8 @@ input:focus, textarea:focus {
   padding: 10px;
 }
 .dark-mode .accordion {
-  background-color: rgba(70,70,70,0.8);
+  background-color: rgba(70, 70, 70, 0.8);
 }
 .dark-mode .accordion-header:hover {
-  background-color: rgba(90,90,90,0.7);
+  background-color: rgba(90, 90, 90, 0.7);
 }
