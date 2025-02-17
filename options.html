@@ -215,6 +215,9 @@
       transform: translateY(16px);
       animation: slideIn 0.3s ease forwards;
       box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.12);
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     @keyframes slideIn {
@@ -250,7 +253,7 @@
           <span class="section-toggle">⌄</span>
         </div>
         <div class="section-body" id="spotifyBody">
-          <p class="small-note">Local storage (demo, not secure) 😊</p>
+          <p class="small-note">Enter your Spotify API credentials from your Spotify Developer Dashboard</p>
           <div class="input-group">
             <input type="text" id="spotifyClientId" placeholder="Client ID">
           </div>
@@ -269,7 +272,7 @@
           <span class="section-toggle">⌄</span>
         </div>
         <div class="section-body" id="youtubeBody">
-          <p class="small-note">Required for YouTube data 🎥</p>
+          <p class="small-note">Enter your YouTube Data API v3 key from Google Cloud Console</p>
           <div class="input-group">
             <input type="text" id="youtubeApiKey" placeholder="YouTube API Key">
           </div>
@@ -286,7 +289,8 @@
 
   <div id="toastContainer" class="toast-container"></div>
 
-  <script src="options.js"></script>
+  <script type="module" src="utils/toast.js"></script>
+  <script type="module" src="options.js"></script>
 </body>
 
 </html>

@@ -14,6 +14,10 @@ const toastContainer = document.getElementById("toastContainer");
 
 async function getCurrentTab() {
   try {
+    if (!chrome.tabs) {
+      throw new Error('Chrome tabs API not available');
+    }
+    
     const queryOptions = { active: true, currentWindow: true };
     const tabs = await new Promise((resolve, reject) => {
       chrome.tabs.query(queryOptions, (tabs) => {
@@ -51,37 +55,22 @@ async function autoFetchFromCurrentTab() {
   }
 }
 
-function showToast(message, type = "info") {
-  if (!message || typeof message !== "string") {
-    console.error("Invalid toast message");
-    return;
-  }
-  try {
-    const toast = document.createElement("div");
-    toast.classList.add("toast", "fade-in");
-    const validTypes = ["success", "error", "info", "warning"];
-    const toastType = validTypes.includes(type) ? type : "info";
-    toast.classList.add(`toast-${toastType}`);
-    toast.innerHTML = `
-      <span class="toast-icon">${toastType === "success"
-        ? "✅"
-        : toastType === "error"
-          ? "❌"
-          : "ℹ️"
-      }</span>
-      <span class="toast-message">${message}</span>
-    `;
-    toastContainer.appendChild(toast);
-    setTimeout(() => {
-      if (toast && toast.parentElement) {
-        toast.classList.remove("fade-in");
-        toast.classList.add("fade-out");
-        setTimeout(() => toast.remove(), 500);
+// Import toast utility
+import { showToast } from './utils/toast.js';
+
+// Configuration loading
+async function loadConfig() {
+  return new Promise((resolve) => {
+    chrome.storage.sync.get(['apiKey', 'theme'], (config) => {
+      if (chrome.runtime.lastError) {
+        console.error('Config load error:', chrome.runtime.lastError);
+        showToast('Failed to load configuration', 'error');
+        resolve({});
+      } else {
+        resolve(config);
       }
-    }, 3000);
-  } catch (error) {
-    console.error("Toast error:", error);
-  }
+    });
+  });
 }
 
 // Theme handling
@@ -157,6 +146,11 @@ function parseYouTubeId(url) {
 
 async function fetchYouTubeInfo(url) {
   try {
+    if (!url) {
+      showToast('Please provide a valid YouTube URL', 'error');
+      return false;
+    }
+    
     const videoId = parseYouTubeId(url);
     if (!videoId) {
       showToast("Invalid YouTube URL format", "error");
@@ -229,6 +223,11 @@ searchSpotifyBtn.addEventListener("click", () => {
 
 function doSpotifySearch(query) {
   try {
+    if (!query || typeof query !== 'string') {
+      showToast('Invalid search query', 'error');
+      return;
+    }
+    
     resultsDiv.innerHTML = "";
     chrome.runtime.sendMessage({ action: "SEARCH_SPOTIFY_TRACKS", query }, (resp) => {
       if (!resp || !resp.success) {
@@ -272,6 +271,10 @@ function doSpotifySearch(query) {
 
 function buildTrackSearchRow(track, query) {
   try {
+    if (!track || !track.name) {
+      throw new Error('Invalid track data');
+    }
+    
     const simScore = computeSimilarity(query, track.name);
     const row = document.createElement("div");
     row.classList.add("result-item");
@@ -425,6 +428,9 @@ openOptionsBtn.addEventListener("click", () => {
 
 document.addEventListener("DOMContentLoaded", async () => {
   try {
+    // Load configuration
+    const config = await loadConfig();
+    
     // Load saved YouTube info from localStorage if it exists
     const savedTitle = localStorage.getItem("youtubeTitle");
     const savedDescription = localStorage.getItem("youtubeDescription");
