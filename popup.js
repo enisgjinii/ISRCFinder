@@ -17,7 +17,10 @@ function showToast(message, type = "info") {
   try {
     const toast = document.createElement("div");
     toast.classList.add("toast", "fade-in");
-    toast.classList.add(type === "success" ? "toast-success" : type === "error" ? "toast-error" : "");
+    toast.classList.add(
+      type === "success" ? "toast-success" : 
+      type === "error" ? "toast-error" : ""
+    );
     toast.textContent = message;
     toastContainer.appendChild(toast);
     setTimeout(() => {
@@ -122,8 +125,15 @@ fetchYouTubeBtn.addEventListener("click", () => {
       youtubeInfoDiv.style.display = "block";
       videoTitleEl.textContent = snippet.title || "(Pa titull)";
       videoDescriptionEl.textContent = snippet.description || "(Pa përshkrim)";
+      // Auto-fill the Spotify search input with the YouTube title.
       spotifySearchInput.value = snippet.title || "";
       showToast("Informacioni i YouTube u mor! 🎉", "success");
+      
+      // Automatically search Spotify if the search input is not empty.
+      const query = spotifySearchInput.value.trim();
+      if (query !== "") {
+        doSpotifySearch(query);
+      }
     });
   } catch (error) {
     console.error(error);
