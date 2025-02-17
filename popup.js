@@ -17,10 +17,7 @@ function showToast(message, type = "info") {
   try {
     const toast = document.createElement("div");
     toast.classList.add("toast", "fade-in");
-    toast.classList.add(
-      type === "success" ? "toast-success" : 
-      type === "error" ? "toast-error" : ""
-    );
+    toast.classList.add(type === "success" ? "toast-success" : type === "error" ? "toast-error" : "");
     toast.textContent = message;
     toastContainer.appendChild(toast);
     setTimeout(() => {
@@ -125,15 +122,8 @@ fetchYouTubeBtn.addEventListener("click", () => {
       youtubeInfoDiv.style.display = "block";
       videoTitleEl.textContent = snippet.title || "(Pa titull)";
       videoDescriptionEl.textContent = snippet.description || "(Pa përshkrim)";
-      // Auto-fill the Spotify search input with the YouTube title.
       spotifySearchInput.value = snippet.title || "";
       showToast("Informacioni i YouTube u mor! 🎉", "success");
-      
-      // Automatically search Spotify if the search input is not empty.
-      const query = spotifySearchInput.value.trim();
-      if (query !== "") {
-        doSpotifySearch(query);
-      }
     });
   } catch (error) {
     console.error(error);
@@ -228,17 +218,6 @@ function buildTrackSearchRow(track, query) {
     console.error(error);
   }
 }
-document.addEventListener("DOMContentLoaded", function () {
-  // Check the active tab when popup is opened
-  chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-    let currentTab = tabs[0];
-
-    if (currentTab && currentTab.url.includes("youtube.com/watch")) {
-      document.getElementById("youtubeLinkInput").value = currentTab.url;
-      document.getElementById("fetchYouTubeBtn").click(); // Auto-click to fetch data
-    }
-  });
-});
 
 fetchSpotifyLinksBtn.addEventListener("click", () => {
   try {

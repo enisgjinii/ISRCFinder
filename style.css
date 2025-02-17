@@ -5,13 +5,15 @@ body {
   font-family: "Segoe UI", sans-serif;
   background: #f7f9fc;
   color: #333;
-  transition: background 0.3s, color 0.3s;
+  transition: background 0.3s, color 0.3s;  border-radius: 12px;
+
 }
 
 .main-container {
   width: 600px;
   margin: 0 auto;
   padding: 20px;
+  border-radius: 12px;
 }
 
 .top-bar {
@@ -304,33 +306,6 @@ textarea:focus {
     transform: translateY(0);
   }
 }
-
-.accordion {
-  background: #fff;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-.accordion-header {
-  display: flex;
-  justify-content: space-between;
-  padding: 16px;
-  cursor: pointer;
-  user-select: none;
-  border-bottom: 1px solid #ddd;
-  transition: background 0.3s;
-}
-.accordion-header:hover {
-  background: #f0f0f0;
-}
-.accordion-toggle {
-  font-size: 22px;
-  font-weight: bold;
-}
-.accordion-body {
-  padding: 16px;
-}
-
 .dark-mode body,
 .dark-mode .main-content {
   background: #2b2b2b;
