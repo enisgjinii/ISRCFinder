@@ -218,6 +218,17 @@ function buildTrackSearchRow(track, query) {
     console.error(error);
   }
 }
+document.addEventListener("DOMContentLoaded", function () {
+  // Check the active tab when popup is opened
+  chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+    let currentTab = tabs[0];
+
+    if (currentTab && currentTab.url.includes("youtube.com/watch")) {
+      document.getElementById("youtubeLinkInput").value = currentTab.url;
+      document.getElementById("fetchYouTubeBtn").click(); // Auto-click to fetch data
+    }
+  });
+});
 
 fetchSpotifyLinksBtn.addEventListener("click", () => {
   try {
