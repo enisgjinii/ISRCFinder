@@ -14,12 +14,19 @@ const toastContainer = document.getElementById("toastContainer");
 
 async function getCurrentTab() {
   try {
-    const queryOptions = { active: true, lastFocusedWindow: true };
-    const [tab] = await chrome.tabs.query(queryOptions);
-    return tab;
+    const queryOptions = { active: true, currentWindow: true };
+    const tabs = await new Promise((resolve, reject) => {
+      chrome.tabs.query(queryOptions, (tabs) => {
+        if (chrome.runtime.lastError) {
+          return reject(chrome.runtime.lastError);
+        }
+        resolve(tabs);
+      });
+    });
+    return tabs[0];
   } catch (error) {
-    console.error('getCurrentTab error:', error);
-    showToast('Failed to get current tab', 'error');
+    console.error("getCurrentTab error:", error);
+    showToast("Failed to get current tab", "error");
     return null;
   }
 }
@@ -28,47 +35,42 @@ async function autoFetchFromCurrentTab() {
   try {
     const tab = await getCurrentTab();
     if (!tab) {
-      showToast('Could not access current tab', 'error');
+      showToast("Could not access current tab", "error");
       return;
     }
-
-    if (!tab.url?.includes('youtube.com/watch')) {
-      showToast('Please open a YouTube video first', 'warning');
+    if (!tab.url?.includes("youtube.com/watch")) {
+      showToast("Please open a YouTube video first", "warning");
       return;
     }
-
-    // Set the URL in the input
-    const input = document.getElementById('youtubeLinkInput');
-    if (input) {
-      input.value = tab.url;
-      await fetchYouTubeInfo(tab.url);
-    }
+    // Set the URL in the input and fetch info
+    youtubeLinkInput.value = tab.url;
+    await fetchYouTubeInfo(tab.url);
   } catch (error) {
-    console.error('Auto-fetch error:', error);
-    showToast('Failed to auto-fetch video info', 'error');
+    console.error("Auto-fetch error:", error);
+    showToast("Failed to auto-fetch video info", "error");
   }
 }
 
 function showToast(message, type = "info") {
-  if (!message || typeof message !== 'string') {
-    console.error('Invalid toast message');
+  if (!message || typeof message !== "string") {
+    console.error("Invalid toast message");
     return;
   }
-
   try {
     const toast = document.createElement("div");
     toast.classList.add("toast", "fade-in");
-    
-    // Validate type parameter
     const validTypes = ["success", "error", "info", "warning"];
     const toastType = validTypes.includes(type) ? type : "info";
-    
     toast.classList.add(`toast-${toastType}`);
     toast.innerHTML = `
-      <span class="toast-icon">${toastType === "success" ? "✅" : toastType === "error" ? "❌" : "ℹ️"}</span>
+      <span class="toast-icon">${toastType === "success"
+        ? "✅"
+        : toastType === "error"
+          ? "❌"
+          : "ℹ️"
+      }</span>
       <span class="toast-message">${message}</span>
     `;
-    
     toastContainer.appendChild(toast);
     setTimeout(() => {
       if (toast && toast.parentElement) {
@@ -82,64 +84,37 @@ function showToast(message, type = "info") {
   }
 }
 
-function loadDarkModePreference() {
-  try {
-    const darkEnabled = localStorage.getItem("darkModeEnabled") === "true";
-    darkModeToggle.checked = darkEnabled;
-    if (darkEnabled) document.documentElement.classList.add("dark-mode");
-  } catch (error) {
-    console.error(error);
-  }
-}
-function saveDarkModePreference(enabled) {
-  try {
-    localStorage.setItem("darkModeEnabled", enabled);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
 // Theme handling
 const html = document.documentElement;
-const themeButtons = document.querySelectorAll('.theme-btn');
-
-// Check system preference
-const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
-
-// Load saved theme
-const savedTheme = localStorage.getItem('theme') || 'system';
+const themeButtons = document.querySelectorAll(".theme-btn");
+const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
+const savedTheme = localStorage.getItem("theme") || "system";
 setTheme(savedTheme);
-
-// Theme button clicks
-themeButtons.forEach(btn => {
-  btn.addEventListener('click', () => {
+themeButtons.forEach((btn) => {
+  btn.addEventListener("click", () => {
     const theme = btn.dataset.theme;
     setTheme(theme);
-    localStorage.setItem('theme', theme);
+    localStorage.setItem("theme", theme);
   });
 });
-
 function setTheme(theme) {
-  // Update button states
-  themeButtons.forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.theme === theme);
+  themeButtons.forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.theme === theme);
   });
-
-  // Apply theme
-  if (theme === 'system') {
-    html.classList.remove('light', 'dark');
+  if (theme === "system") {
+    html.classList.remove("light", "dark");
   } else {
-    html.classList.remove('light', 'dark');
+    html.classList.remove("light", "dark");
     html.classList.add(theme);
   }
 }
-
-// Listen for system theme changes
-prefersDark.addEventListener('change', (e) => {
-  if (localStorage.getItem('theme') === 'system') {
-    setTheme('system');
+prefersDark.addEventListener("change", (e) => {
+  if (localStorage.getItem("theme") === "system") {
+    setTheme("system");
   }
 });
+
+// Save and load search results from localStorage
 function updateSavedResults() {
   try {
     localStorage.setItem("savedResults", resultsDiv.innerHTML);
@@ -161,7 +136,7 @@ function computeSimilarity(str1, str2) {
   try {
     const set1 = new Set(str1.toLowerCase().split(/\s+/));
     const set2 = new Set(str2.toLowerCase().split(/\s+/));
-    const intersection = new Set([...set1].filter(x => set2.has(x)));
+    const intersection = new Set([...set1].filter((x) => set2.has(x)));
     const union = new Set([...set1, ...set2]);
     return union.size ? intersection.size / union.size : 0;
   } catch (error) {
@@ -184,49 +159,46 @@ async function fetchYouTubeInfo(url) {
   try {
     const videoId = parseYouTubeId(url);
     if (!videoId) {
-      showToast('Invalid YouTube URL format', 'error');
+      showToast("Invalid YouTube URL format", "error");
       return;
     }
-
     fetchYouTubeBtn.disabled = true;
-    showToast('Fetching video info...', 'info');
-
+    showToast("Fetching video info...", "info");
     return new Promise((resolve) => {
-      chrome.runtime.sendMessage({ action: 'GET_YOUTUBE_SNIPPET', videoId }, (resp) => {
+      chrome.runtime.sendMessage({ action: "GET_YOUTUBE_SNIPPET", videoId }, (resp) => {
         fetchYouTubeBtn.disabled = false;
-        
         if (!resp || !resp.success) {
-          showToast(`Error: ${resp?.error || 'No response'}`, 'error');
+          showToast(`Error: ${resp?.error || "No response"}`, "error");
           resolve(false);
           return;
         }
-
         const items = resp.youtubeData.items || [];
         if (!items.length) {
-          showToast('Video not found. 😕', 'info');
+          showToast("Video not found. 😕", "info");
           resolve(false);
           return;
         }
-
         const snippet = items[0].snippet || {};
-        youtubeInfoDiv.style.display = 'block';
-        videoTitleEl.textContent = snippet.title || '(No title)';
-        videoDescriptionEl.textContent = snippet.description || '(No description)';
-        spotifySearchInput.value = snippet.title || '';
-        
-        showToast('YouTube info fetched! 🎉', 'success');
-        
-        // Auto trigger Spotify search
+        youtubeInfoDiv.style.display = "block";
+        videoTitleEl.textContent = snippet.title || "(No title)";
+        videoDescriptionEl.textContent = snippet.description || "(No description)";
+        spotifySearchInput.value = snippet.title || "";
+
+        // Save the YouTube video info in localStorage
+        localStorage.setItem("youtubeTitle", snippet.title || "");
+        localStorage.setItem("youtubeDescription", snippet.description || "");
+
+        showToast("YouTube info fetched! 🎉", "success");
+        // Auto-trigger Spotify search if a title exists
         if (snippet.title) {
           setTimeout(() => doSpotifySearch(snippet.title), 500);
         }
-        
         resolve(true);
       });
     });
   } catch (error) {
-    console.error('YouTube fetch error:', error);
-    showToast('Error fetching YouTube info.', 'error');
+    console.error("YouTube fetch error:", error);
+    showToast("Error fetching YouTube info.", "error");
     fetchYouTubeBtn.disabled = false;
     return false;
   }
@@ -235,7 +207,7 @@ async function fetchYouTubeInfo(url) {
 fetchYouTubeBtn.addEventListener("click", async () => {
   const link = youtubeLinkInput.value.trim();
   if (!link) {
-    showToast('Please enter a YouTube URL', 'error');
+    showToast("Please enter a YouTube URL", "error");
     return;
   }
   await fetchYouTubeInfo(link);
@@ -245,13 +217,13 @@ searchSpotifyBtn.addEventListener("click", () => {
   try {
     const query = spotifySearchInput.value.trim();
     if (!query) {
-      showToast("Vendosni një kërkim për Spotify! 🔍", "error");
+      showToast("Please enter a Spotify search query! 🔍", "error");
       return;
     }
     doSpotifySearch(query);
   } catch (error) {
     console.error(error);
-    showToast("Gabim gjatë fillimit të kërkimit në Spotify.", "error");
+    showToast("Error starting Spotify search.", "error");
   }
 });
 
@@ -260,57 +232,58 @@ function doSpotifySearch(query) {
     resultsDiv.innerHTML = "";
     chrome.runtime.sendMessage({ action: "SEARCH_SPOTIFY_TRACKS", query }, (resp) => {
       if (!resp || !resp.success) {
-        showToast(`Gabim: ${resp?.error || "Nuk ka përgjigje"}`, "error");
+        showToast(`Error: ${resp?.error || "No response"}`, "error");
         return;
       }
       const items = resp.searchData.tracks?.items || [];
       if (!items.length) {
-        showToast("Nuk u gjet asnjë këngë. 😕", "info");
+        showToast("No songs found. 😕", "info");
         return;
       }
       let maxSim = 0;
-      items.forEach(track => {
+      items.forEach((track) => {
         const sim = computeSimilarity(query, track.name);
         if (sim > maxSim) maxSim = sim;
       });
       if (maxSim < 0.4 && videoDescriptionEl.textContent.trim() !== "") {
         const fallbackBtn = document.createElement("button");
         fallbackBtn.classList.add("btn", "btn-small", "btn-purple");
-        fallbackBtn.textContent = "Provo me Përshkrim 🔄";
+        fallbackBtn.textContent = "Try with Description 🔄";
         fallbackBtn.addEventListener("click", () => {
-          const fallbackQuery = videoDescriptionEl.textContent.trim().split(" ").slice(0, 10).join(" ");
+          const fallbackQuery = videoDescriptionEl.textContent
+            .trim()
+            .split(" ")
+            .slice(0, 10)
+            .join(" ");
           doSpotifySearch(fallbackQuery);
         });
         resultsDiv.appendChild(fallbackBtn);
-        showToast("Similari i ulët. Provo me përshkrim?", "info");
+        showToast("Low similarity. Try with description?", "info");
       }
-      showToast(`U gjetën ${items.length} këngë! 🎶`, "success");
-      items.forEach(track => buildTrackSearchRow(track, query));
+      showToast(`Found ${items.length} songs! 🎶`, "success");
+      items.forEach((track) => buildTrackSearchRow(track, query));
       updateSavedResults();
     });
   } catch (error) {
     console.error(error);
-    showToast("Gabim gjatë kërkimit në Spotify.", "error");
+    showToast("Error during Spotify search.", "error");
   }
 }
-
-// Replace the buildTrackSearchRow function with this:
 
 function buildTrackSearchRow(track, query) {
   try {
     const simScore = computeSimilarity(query, track.name);
     const row = document.createElement("div");
     row.classList.add("result-item");
-    
     row.innerHTML = `
       <img 
-        src="${track.album.images[0]?.url || 'placeholder.png'}" 
+        src="${track.album.images[0]?.url || "placeholder.png"}" 
         alt="${track.name}"
         class="result-thumbnail"
       />
       <div class="result-content">
         <div class="result-title">${track.name}</div>
-        <div class="result-subtitle">${track.artists[0]?.name || 'Unknown'} • ${track.album.name}</div>
+        <div class="result-subtitle">${track.artists[0]?.name || "Unknown"} • ${track.album.name}</div>
       </div>
       <div class="result-actions">
         <span class="result-badge">${(simScore * 100).toFixed(0)}%</span>
@@ -319,11 +292,9 @@ function buildTrackSearchRow(track, query) {
         </button>
       </div>
     `;
-
-    row.querySelector('.get-details').addEventListener('click', () => {
+    row.querySelector(".get-details").addEventListener("click", () => {
       getSpotifyTrackDetails(track.id);
     });
-
     resultsDiv.appendChild(row);
     updateSavedResults();
   } catch (error) {
@@ -336,23 +307,23 @@ fetchSpotifyLinksBtn.addEventListener("click", () => {
   try {
     const raw = manualSpotifyInput.value.trim();
     if (!raw) {
-      showToast("Vendosni një lidhje Spotify! 🔗", "error");
+      showToast("Please enter a Spotify link! 🔗", "error");
       return;
     }
     resultsDiv.innerHTML = "";
-    const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-    lines.forEach(line => {
+    const lines = raw.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    lines.forEach((line) => {
       if (line.includes("spotify.com/track/")) {
         const trackId = parseSpotifyId(line, "track");
         if (trackId) getSpotifyTrackDetails(trackId);
-        else showToast(`Lidhje e pavlefshme: ${line}`, "error");
+        else showToast(`Invalid link: ${line}`, "error");
       } else {
-        showToast(`Lidhje e panjohur: ${line}`, "error");
+        showToast(`Unknown link: ${line}`, "error");
       }
     });
   } catch (error) {
     console.error(error);
-    showToast("Gabim gjatë përpunimit të lidhjes Spotify.", "error");
+    showToast("Error processing the Spotify link.", "error");
   }
 });
 
@@ -371,38 +342,35 @@ function getSpotifyTrackDetails(trackId) {
   try {
     chrome.runtime.sendMessage({ action: "GET_SPOTIFY_TRACK_DETAILS", trackId }, (resp) => {
       if (!resp || !resp.success) {
-        showToast(`Gabim: ${resp?.error || "Nuk ka përgjigje"}`, "error");
+        showToast(`Error: ${resp?.error || "No response"}`, "error");
         return;
       }
       buildTrackDetailsCard(resp.trackData, resp.audioFeatures);
     });
   } catch (error) {
     console.error(error);
-    showToast("Gabim gjatë marrjes së detajeve.", "error");
+    showToast("Error fetching track details.", "error");
   }
 }
-
-// And update the buildTrackDetailsCard function:
 
 function buildTrackDetailsCard(trackData, audioFeatures) {
   try {
     const container = document.createElement("div");
     container.classList.add("result-item");
-    
     container.innerHTML = `
       <img 
-        src="${trackData.album?.images[0]?.url || 'placeholder.png'}" 
+        src="${trackData.album?.images[0]?.url || "placeholder.png"}" 
         alt="${trackData.name}"
         class="result-thumbnail"
       />
       <div class="result-content">
         <div class="result-title">${trackData.name}</div>
         <div class="result-subtitle">
-          ${trackData.artists[0]?.name || 'Unknown'} • ${trackData.album?.name}
+          ${trackData.artists[0]?.name || "Unknown"} • ${trackData.album?.name}
         </div>
         <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">
-          ISRC: ${trackData.external_ids?.isrc || 'N/A'} • 
-          UPC: ${trackData.album?.external_ids?.upc || 'N/A'}
+          ISRC: ${trackData.external_ids?.isrc || "N/A"} • 
+          UPC: ${trackData.album?.external_ids?.upc || "N/A"}
         </div>
       </div>
       <div class="result-actions">
@@ -414,11 +382,10 @@ function buildTrackDetailsCard(trackData, audioFeatures) {
         </button>
       </div>
     `;
-
-    container.querySelectorAll('.action-button').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const val = btn.getAttribute('data-value');
-        if (val && val !== 'N/A') {
+    container.querySelectorAll(".action-button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const val = btn.getAttribute("data-value");
+        if (val && val !== "N/A") {
           navigator.clipboard.writeText(val)
             .then(() => showToast(`Copied: ${val}`, "success"))
             .catch(() => showToast("Copy failed", "error"));
@@ -427,7 +394,6 @@ function buildTrackDetailsCard(trackData, audioFeatures) {
         }
       });
     });
-
     resultsDiv.appendChild(container);
     updateSavedResults();
   } catch (error) {
@@ -440,10 +406,10 @@ clearResultsBtn.addEventListener("click", () => {
   try {
     resultsDiv.innerHTML = "";
     updateSavedResults();
-    showToast("Rezultatet u pastren. 🗑️", "success");
+    showToast("Results cleared. 🗑️", "success");
   } catch (error) {
     console.error(error);
-    showToast("Gabim gjatë pastrimit të rezultateve.", "error");
+    showToast("Error clearing results.", "error");
   }
 });
 
@@ -453,15 +419,23 @@ openOptionsBtn.addEventListener("click", () => {
     else window.open(chrome.runtime.getURL("options.html"));
   } catch (error) {
     console.error(error);
-    showToast("Gabim gjatë hapjes së opsioneve.", "error");
+    showToast("Error opening options.", "error");
   }
 });
 
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener("DOMContentLoaded", async () => {
   try {
+    // Load saved YouTube info from localStorage if it exists
+    const savedTitle = localStorage.getItem("youtubeTitle");
+    const savedDescription = localStorage.getItem("youtubeDescription");
+    if (savedTitle || savedDescription) {
+      youtubeInfoDiv.style.display = "block";
+      videoTitleEl.textContent = savedTitle || "(No title)";
+      videoDescriptionEl.textContent = savedDescription || "(No description)";
+    }
     await autoFetchFromCurrentTab();
   } catch (error) {
-    console.error('DOMContentLoaded error:', error);
-    showToast('Failed to initialize extension', 'error');
+    console.error("DOMContentLoaded error:", error);
+    showToast("Failed to initialize extension", "error");
   }
 });
