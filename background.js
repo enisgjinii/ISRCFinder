@@ -17,6 +17,21 @@ async function getUserCredentials() {
     throw error;
   }
 }
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === "complete" && tab.url.includes("youtube.com/watch")) {
+      chrome.scripting.executeScript({
+          target: { tabId: tabId },
+          function: extractYouTubeVideoInfo
+      });
+  }
+});
+
+function extractYouTubeVideoInfo() {
+  let title = document.title.replace(" - YouTube", ""); // Get the video title
+  let url = window.location.href;
+
+  chrome.runtime.sendMessage({ action: "fetchYouTubeDetails", title: title, url: url });
+}
 
 async function getSpotifyToken() {
   try {

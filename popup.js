@@ -1,4 +1,3 @@
-const darkModeToggle = document.getElementById("darkModeToggle");
 const openOptionsBtn = document.getElementById("openOptionsBtn");
 const youtubeLinkInput = document.getElementById("youtubeLinkInput");
 const fetchYouTubeBtn = document.getElementById("fetchYouTubeBtn");
@@ -13,20 +12,73 @@ const resultsDiv = document.getElementById("results");
 const clearResultsBtn = document.getElementById("clearResultsBtn");
 const toastContainer = document.getElementById("toastContainer");
 
+async function getCurrentTab() {
+  try {
+    const queryOptions = { active: true, lastFocusedWindow: true };
+    const [tab] = await chrome.tabs.query(queryOptions);
+    return tab;
+  } catch (error) {
+    console.error('getCurrentTab error:', error);
+    showToast('Failed to get current tab', 'error');
+    return null;
+  }
+}
+
+async function autoFetchFromCurrentTab() {
+  try {
+    const tab = await getCurrentTab();
+    if (!tab) {
+      showToast('Could not access current tab', 'error');
+      return;
+    }
+
+    if (!tab.url?.includes('youtube.com/watch')) {
+      showToast('Please open a YouTube video first', 'warning');
+      return;
+    }
+
+    // Set the URL in the input
+    const input = document.getElementById('youtubeLinkInput');
+    if (input) {
+      input.value = tab.url;
+      await fetchYouTubeInfo(tab.url);
+    }
+  } catch (error) {
+    console.error('Auto-fetch error:', error);
+    showToast('Failed to auto-fetch video info', 'error');
+  }
+}
+
 function showToast(message, type = "info") {
+  if (!message || typeof message !== 'string') {
+    console.error('Invalid toast message');
+    return;
+  }
+
   try {
     const toast = document.createElement("div");
     toast.classList.add("toast", "fade-in");
-    toast.classList.add(type === "success" ? "toast-success" : type === "error" ? "toast-error" : "");
-    toast.textContent = message;
+    
+    // Validate type parameter
+    const validTypes = ["success", "error", "info", "warning"];
+    const toastType = validTypes.includes(type) ? type : "info";
+    
+    toast.classList.add(`toast-${toastType}`);
+    toast.innerHTML = `
+      <span class="toast-icon">${toastType === "success" ? "✅" : toastType === "error" ? "❌" : "ℹ️"}</span>
+      <span class="toast-message">${message}</span>
+    `;
+    
     toastContainer.appendChild(toast);
     setTimeout(() => {
-      toast.classList.remove("fade-in");
-      toast.classList.add("fade-out");
-      setTimeout(() => toast.remove(), 500);
+      if (toast && toast.parentElement) {
+        toast.classList.remove("fade-in");
+        toast.classList.add("fade-out");
+        setTimeout(() => toast.remove(), 500);
+      }
     }, 3000);
   } catch (error) {
-    console.error(error);
+    console.error("Toast error:", error);
   }
 }
 
@@ -46,16 +98,48 @@ function saveDarkModePreference(enabled) {
     console.error(error);
   }
 }
-darkModeToggle.addEventListener("change", () => {
-  if (darkModeToggle.checked) {
-    document.documentElement.classList.add("dark-mode");
-    saveDarkModePreference(true);
-  } else {
-    document.documentElement.classList.remove("dark-mode");
-    saveDarkModePreference(false);
-  }
+
+// Theme handling
+const html = document.documentElement;
+const themeButtons = document.querySelectorAll('.theme-btn');
+
+// Check system preference
+const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+
+// Load saved theme
+const savedTheme = localStorage.getItem('theme') || 'system';
+setTheme(savedTheme);
+
+// Theme button clicks
+themeButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const theme = btn.dataset.theme;
+    setTheme(theme);
+    localStorage.setItem('theme', theme);
+  });
 });
 
+function setTheme(theme) {
+  // Update button states
+  themeButtons.forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.theme === theme);
+  });
+
+  // Apply theme
+  if (theme === 'system') {
+    html.classList.remove('light', 'dark');
+  } else {
+    html.classList.remove('light', 'dark');
+    html.classList.add(theme);
+  }
+}
+
+// Listen for system theme changes
+prefersDark.addEventListener('change', (e) => {
+  if (localStorage.getItem('theme') === 'system') {
+    setTheme('system');
+  }
+});
 function updateSavedResults() {
   try {
     localStorage.setItem("savedResults", resultsDiv.innerHTML);
@@ -96,39 +180,65 @@ function parseYouTubeId(url) {
   }
 }
 
-fetchYouTubeBtn.addEventListener("click", () => {
+async function fetchYouTubeInfo(url) {
   try {
-    const link = youtubeLinkInput.value.trim();
-    if (!link) {
-      showToast("Ju lutem vendosni një lidhje YouTube! 🔗", "error");
-      return;
-    }
-    const videoId = parseYouTubeId(link);
+    const videoId = parseYouTubeId(url);
     if (!videoId) {
-      showToast("Lidhje e pavlefshme YouTube.", "error");
+      showToast('Invalid YouTube URL format', 'error');
       return;
     }
-    chrome.runtime.sendMessage({ action: "GET_YOUTUBE_SNIPPET", videoId }, (resp) => {
-      if (!resp || !resp.success) {
-        showToast(`Gabim: ${resp?.error || "Nuk ka përgjigje"}`, "error");
-        return;
-      }
-      const items = resp.youtubeData.items || [];
-      if (!items.length) {
-        showToast("Video nuk u gjet. 😕", "info");
-        return;
-      }
-      const snippet = items[0].snippet || {};
-      youtubeInfoDiv.style.display = "block";
-      videoTitleEl.textContent = snippet.title || "(Pa titull)";
-      videoDescriptionEl.textContent = snippet.description || "(Pa përshkrim)";
-      spotifySearchInput.value = snippet.title || "";
-      showToast("Informacioni i YouTube u mor! 🎉", "success");
+
+    fetchYouTubeBtn.disabled = true;
+    showToast('Fetching video info...', 'info');
+
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage({ action: 'GET_YOUTUBE_SNIPPET', videoId }, (resp) => {
+        fetchYouTubeBtn.disabled = false;
+        
+        if (!resp || !resp.success) {
+          showToast(`Error: ${resp?.error || 'No response'}`, 'error');
+          resolve(false);
+          return;
+        }
+
+        const items = resp.youtubeData.items || [];
+        if (!items.length) {
+          showToast('Video not found. 😕', 'info');
+          resolve(false);
+          return;
+        }
+
+        const snippet = items[0].snippet || {};
+        youtubeInfoDiv.style.display = 'block';
+        videoTitleEl.textContent = snippet.title || '(No title)';
+        videoDescriptionEl.textContent = snippet.description || '(No description)';
+        spotifySearchInput.value = snippet.title || '';
+        
+        showToast('YouTube info fetched! 🎉', 'success');
+        
+        // Auto trigger Spotify search
+        if (snippet.title) {
+          setTimeout(() => doSpotifySearch(snippet.title), 500);
+        }
+        
+        resolve(true);
+      });
     });
   } catch (error) {
-    console.error(error);
-    showToast("Gabim gjatë marrjes së informacionit nga YouTube.", "error");
+    console.error('YouTube fetch error:', error);
+    showToast('Error fetching YouTube info.', 'error');
+    fetchYouTubeBtn.disabled = false;
+    return false;
   }
+}
+
+fetchYouTubeBtn.addEventListener("click", async () => {
+  const link = youtubeLinkInput.value.trim();
+  if (!link) {
+    showToast('Please enter a YouTube URL', 'error');
+    return;
+  }
+  await fetchYouTubeInfo(link);
 });
 
 searchSpotifyBtn.addEventListener("click", () => {
@@ -184,38 +294,41 @@ function doSpotifySearch(query) {
   }
 }
 
+// Replace the buildTrackSearchRow function with this:
+
 function buildTrackSearchRow(track, query) {
   try {
-    const row = document.createElement("div");
-    row.classList.add("search-result-row");
-
-    const img = document.createElement("img");
-    img.src = track.album.images[0]?.url || "";
-    img.alt = "Kopertinë e Albumit";
-    img.classList.add("album-cover");
-
-    const text = document.createElement("span");
-    text.textContent = `${track.name} — ${track.artists?.[0]?.name || "?"}`;
-
     const simScore = computeSimilarity(query, track.name);
-    const simText = document.createElement("div");
-    simText.classList.add("similarity");
-    simText.textContent = `Similari: ${(simScore * 100).toFixed(0)}%`;
+    const row = document.createElement("div");
+    row.classList.add("result-item");
+    
+    row.innerHTML = `
+      <img 
+        src="${track.album.images[0]?.url || 'placeholder.png'}" 
+        alt="${track.name}"
+        class="result-thumbnail"
+      />
+      <div class="result-content">
+        <div class="result-title">${track.name}</div>
+        <div class="result-subtitle">${track.artists[0]?.name || 'Unknown'} • ${track.album.name}</div>
+      </div>
+      <div class="result-actions">
+        <span class="result-badge">${(simScore * 100).toFixed(0)}%</span>
+        <button class="action-button get-details" title="Get track details">
+          <span>Details</span>
+        </button>
+      </div>
+    `;
 
-    const btn = document.createElement("button");
-    btn.classList.add("btn", "btn-small", "btn-green");
-    btn.textContent = "Merr Detaje";
-    btn.addEventListener("click", () => getSpotifyTrackDetails(track.id));
-
-    row.appendChild(img);
-    row.appendChild(text);
-    row.appendChild(simText);
-    row.appendChild(btn);
+    row.querySelector('.get-details').addEventListener('click', () => {
+      getSpotifyTrackDetails(track.id);
+    });
 
     resultsDiv.appendChild(row);
     updateSavedResults();
   } catch (error) {
     console.error(error);
+    showToast("Error building result row", "error");
   }
 }
 
@@ -269,58 +382,57 @@ function getSpotifyTrackDetails(trackId) {
   }
 }
 
+// And update the buildTrackDetailsCard function:
+
 function buildTrackDetailsCard(trackData, audioFeatures) {
   try {
     const container = document.createElement("div");
-    container.classList.add("detail-card");
-    const trackName = trackData.name || "E panjohur";
-    const artist = trackData.artists?.[0]?.name || "E panjohur";
-    const albumName = trackData.album?.name || "E panjohur";
-    const isrc = trackData.external_ids?.isrc || "Nuk ka";
-    const upc = trackData.album?.external_ids?.upc || "Nuk ka";
-    const popularity = trackData.popularity ?? "Nuk dihet";
-    const cover = trackData.album?.images?.[0]?.url || "";
+    container.classList.add("result-item");
+    
     container.innerHTML = `
-      <h3 class="detail-title">🎵 ${trackName} — ${artist}</h3>
-      <div class="detail-body">
-        <div class="cover-col">
-          ${cover ? `<img src="${cover}" alt="Kopertinë" class="cover-img">` : `<div class="cover-placeholder">Pa Kopertinë</div>`}
+      <img 
+        src="${trackData.album?.images[0]?.url || 'placeholder.png'}" 
+        alt="${trackData.name}"
+        class="result-thumbnail"
+      />
+      <div class="result-content">
+        <div class="result-title">${trackData.name}</div>
+        <div class="result-subtitle">
+          ${trackData.artists[0]?.name || 'Unknown'} • ${trackData.album?.name}
         </div>
-        <div class="info-col">
-          <p><strong>Album:</strong> ${albumName}</p>
-          <p><strong>Popullariteti:</strong> ${popularity}</p>
-          <p><strong>ISRC:</strong> ${isrc} <button class="btn-copy" data-value="${isrc}">📋</button></p>
-          <p><strong>UPC:</strong> ${upc} <button class="btn-copy" data-value="${upc}">📋</button></p>
+        <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">
+          ISRC: ${trackData.external_ids?.isrc || 'N/A'} • 
+          UPC: ${trackData.album?.external_ids?.upc || 'N/A'}
         </div>
       </div>
+      <div class="result-actions">
+        <button class="action-button" data-value="${trackData.external_ids?.isrc}" title="Copy ISRC">
+          📋 ISRC
+        </button>
+        <button class="action-button" data-value="${trackData.album?.external_ids?.upc}" title="Copy UPC">
+          📋 UPC
+        </button>
+      </div>
     `;
-    if (audioFeatures) {
-      const feats = document.createElement("div");
-      feats.classList.add("audio-features");
-      feats.innerHTML = `
-        <p><strong>Danceability:</strong> ${audioFeatures.danceability ?? "Nuk ka"}</p>
-        <p><strong>Energy:</strong> ${audioFeatures.energy ?? "Nuk ka"}</p>
-        <p><strong>Tempo:</strong> ${audioFeatures.tempo ?? "Nuk ka"}</p>
-      `;
-      container.appendChild(feats);
-    }
-    container.querySelectorAll(".btn-copy").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const val = btn.getAttribute("data-value") || "";
-        if (val && val !== "Nuk ka") {
+
+    container.querySelectorAll('.action-button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const val = btn.getAttribute('data-value');
+        if (val && val !== 'N/A') {
           navigator.clipboard.writeText(val)
-            .then(() => showToast(`Kopjua: ${val}`, "success"))
-            .catch(() => showToast("Kopjimi dështoi.", "error"));
+            .then(() => showToast(`Copied: ${val}`, "success"))
+            .catch(() => showToast("Copy failed", "error"));
         } else {
-          showToast("Asgjë për të kopjuar!", "error");
+          showToast("Nothing to copy!", "warning");
         }
       });
     });
+
     resultsDiv.appendChild(container);
     updateSavedResults();
   } catch (error) {
     console.error(error);
-    showToast("Gabim gjatë shfaqjes së detajeve.", "error");
+    showToast("Error building details card", "error");
   }
 }
 
@@ -345,4 +457,11 @@ openOptionsBtn.addEventListener("click", () => {
   }
 });
 
-loadDarkModePreference();
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    await autoFetchFromCurrentTab();
+  } catch (error) {
+    console.error('DOMContentLoaded error:', error);
+    showToast('Failed to initialize extension', 'error');
+  }
+});

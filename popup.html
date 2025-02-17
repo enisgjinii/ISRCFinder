@@ -1,49 +1,491 @@
 <!DOCTYPE html>
-<html lang="sq">
+<html lang="en" class="light">
 
 <head>
   <meta charset="utf-8" />
-  <title>Gjetësi YouTube → Spotify 🎶</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>YouTube → Spotify 🎶</title>
+  <style>
+    :root {
+      --background: #ffffff;
+      --surface: #ffffff;
+      --surface-hover: #f8fafc;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --text-secondary: #64748b;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --success: #10b981;
+      --success-hover: #059669;
+      --purple: #8b5cf6;
+      --purple-hover: #7c3aed;
+      --card-shadow: 0 2px 12px -4px rgba(0, 0, 0, 0.1);
+      --input-bg: #f8fafc;
+    }
+
+    .dark {
+      --background: #0f172a;
+      --surface: #1e293b;
+      --surface-hover: #2d3748;
+      --border: #334155;
+      --text: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --primary: #60a5fa;
+      --primary-hover: #3b82f6;
+      --success: #34d399;
+      --success-hover: #10b981;
+      --purple: #a78bfa;
+      --purple-hover: #8b5cf6;
+      --card-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.3);
+      --input-bg: #1e293b;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        color-scheme: dark;
+      }
+
+      html:not(.light) {
+        --background: #0f172a;
+        --surface: #1e293b;
+        --surface-hover: #2d3748;
+        --border: #334155;
+        --text: #f1f5f9;
+        --text-secondary: #94a3b8;
+        --primary: #60a5fa;
+        --primary-hover: #3b82f6;
+        --success: #34d399;
+        --success-hover: #10b981;
+        --purple: #a78bfa;
+        --purple-hover: #8b5cf6;
+        --card-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.3);
+        --input-bg: #1e293b;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      width: 400px;
+      background: var(--background);
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.5;
+      transition: background-color 0.3s ease;
+    }
+
+    .main-container {
+      padding: 12px;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .theme-toggle {
+      display: flex;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 4px;
+      border-radius: 6px;
+    }
+
+    .theme-btn {
+      padding: 4px 8px;
+      border: none;
+      border-radius: 4px;
+      background: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .theme-btn.active {
+      background: var(--primary);
+      color: white;
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: var(--card-shadow);
+      border: 1px solid var(--border);
+      margin-bottom: 12px;
+      transition: all 0.3s ease;
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .input-group {
+      margin-bottom: 10px;
+    }
+
+    input,
+    textarea {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 13px;
+      background: var(--input-bg);
+      color: var(--text);
+      transition: all 0.2s ease;
+    }
+
+    input:hover,
+    textarea:hover {
+      border-color: var(--primary);
+    }
+
+    input:focus,
+    textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 50px;
+    }
+
+    .btn {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+
+    .btn-green {
+      background: var(--success);
+      color: white;
+    }
+
+    .btn-green:hover {
+      background: var(--success-hover);
+    }
+
+    .btn-purple {
+      background: var(--purple);
+      color: white;
+    }
+
+    .btn-purple:hover {
+      background: var(--purple-hover);
+    }
+
+    .btn-blue {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-blue:hover {
+      background: var(--primary-hover);
+    }
+
+    .youtube-info {
+      background: var(--input-bg);
+      border-radius: 6px;
+      padding: 12px;
+      margin: 8px 0;
+      border: 1px solid var(--border);
+    }
+
+    .info-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .video-description {
+      color: var(--text-secondary);
+      font-size: 12px;
+      max-height: 100px;
+      overflow-y: auto;
+    }
+
+    .results {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 300px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .result-item {
+      display: grid;
+      grid-template-columns: 40px 1fr auto;
+      gap: 12px;
+      padding: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      align-items: center;
+      transition: all 0.2s ease;
+    }
+
+    .result-item:hover {
+      border-color: var(--primary);
+      transform: translateY(-1px);
+      box-shadow: var(--card-shadow);
+    }
+
+    .result-thumbnail {
+      width: 40px;
+      height: 40px;
+      border-radius: 6px;
+      object-fit: cover;
+    }
+
+    .result-content {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .result-title {
+      font-weight: 500;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .result-subtitle {
+      font-size: 12px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .result-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .result-badge {
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 12px;
+      background: var(--primary);
+      color: white;
+      white-space: nowrap;
+    }
+
+    .action-button {
+      padding: 4px 8px;
+      border: none;
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+    }
+
+    .action-button:hover {
+      background: var(--surface-hover);
+      color: var(--primary);
+    }
+
+    .toast-container {
+      position: fixed;
+      bottom: 12px;
+      right: 12px;
+      z-index: 9999;
+    }
+
+    .toast {
+      background: var(--surface);
+      color: var(--text);
+      padding: 8px 12px;
+      margin-bottom: 6px;
+      border-radius: 6px;
+      font-size: 13px;
+      box-shadow: var(--card-shadow);
+      border: 1px solid var(--border);
+      opacity: 0;
+      transform: translateY(12px);
+      animation: slideIn 0.2s ease forwards;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 200px;
+      max-width: 300px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      border-radius: 8px;
+    }
+
+    .toast-success {
+      border-left: 4px solid var(--success);
+    }
+
+    .toast-error {
+      border-left: 4px solid #ef4444;
+    }
+
+    .toast-warning {
+      border-left: 4px solid #f59e0b;
+    }
+
+    .toast-info {
+      border-left: 4px solid var(--primary);
+    }
+
+    .toast-icon {
+      flex-shrink: 0;
+    }
+
+    .toast-message {
+      flex-grow: 1;
+      word-break: break-word;
+    }
+
+    .toast.fade-out {
+      animation: slideOut 0.2s ease forwards;
+    }
+
+    @keyframes slideIn {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes slideOut {
+      to {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--input-bg);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-secondary);
+    }
+
+    /* Loading States */
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    /* Error States */
+    .input-error {
+      border-color: #ef4444;
+    }
+
+    .error-message {
+      color: #ef4444;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+  </style>
 </head>
 
 <body>
   <div class="main-container">
     <div class="top-bar">
-      <label class="dark-toggle" data-tooltip="Ndrysho Modalitetin e Errët">
-        <input type="checkbox" id="darkModeToggle" />
-        <span class="slider"></span>
-      </label>
-      <button id="openOptionsBtn" class="btn btn-green" data-tooltip="Hap Opsionet">⚙️ Opsionet</button>
-    </div>
-    <div id="inputSection" class="section">
-      <div class="card">
-        <h2 class="card-title">Vendos URL-në e YouTube 🔗</h2>
-        <input type="text" id="youtubeLinkInput" placeholder="https://www.youtube.com/watch?v=..." />
-        <button id="fetchYouTubeBtn" class="btn btn-purple">Merr Info nga YouTube ✨</button>
-        <div id="youtubeInfo" class="youtube-info" style="display: none;">
-          <h3>Titulli: 🎬</h3>
-          <p id="videoTitle" class="video-title"></p>
-          <h3>Përshkrimi: 📝</h3>
-          <div id="videoDescription" class="video-description"></div>
-        </div>
-        <h2 class="card-title margin-top">Kërko në Spotify me Titullin 🎶</h2>
-        <input type="text" id="spotifySearchInput" placeholder="Vendos titullin e këngës (ose modifiko)" />
-        <button id="searchSpotifyBtn" class="btn btn-blue">Kërko në Spotify 🔍</button>
-        <h2 class="card-title margin-top">Ose Vendos URL-në e Spotify Direkt 🔗</h2>
-        <textarea id="manualSpotifyInput" style="height:60px;" placeholder="Ngjit lidhjen e Spotify këtu..."></textarea>
-        <button id="fetchSpotifyLinksBtn" class="btn btn-purple">Merr Detajet nga Spotify ✨</button>
+      <div class="theme-toggle">
+        <button class="theme-btn" data-theme="system">💻</button>
+        <button class="theme-btn" data-theme="light">☀️</button>
+        <button class="theme-btn" data-theme="dark">🌙</button>
       </div>
+      <button id="openOptionsBtn" class="btn btn-green" style="width: auto; margin: 0; padding: 6px 10px;">
+        ⚙️
+      </button>
     </div>
-    <div id="resultsSection" class="section">
-      <div class="card">
-        <h2 class="card-title">Rezultatet 📑</h2>
-        <button id="clearResultsBtn" class="btn btn-gray">Pastro Rezultatet 🗑️</button>
-        <div id="results" class="results"></div>
+
+    <div class="card">
+      <div class="input-group">
+        <input type="text" id="youtubeLinkInput" placeholder="🔗 YouTube URL" />
       </div>
+      <button id="fetchYouTubeBtn" class="btn btn-purple">✨ Get Info</button>
+
+      <div id="youtubeInfo" class="youtube-info" style="display: none;">
+        <div class="info-title">🎬 Title</div>
+        <p id="videoTitle" class="video-title"></p>
+        <div class="info-title">📝 Description</div>
+        <div id="videoDescription" class="video-description"></div>
+      </div>
+
+      <div class="input-group">
+        <input type="text" id="spotifySearchInput" placeholder="🎵 Song title to search" />
+      </div>
+      <button id="searchSpotifyBtn" class="btn btn-blue">🔍 Search Spotify</button>
+
+      <div class="input-group">
+        <textarea id="manualSpotifyInput" placeholder="🔗 Or paste Spotify link here"></textarea>
+      </div>
+      <button id="fetchSpotifyLinksBtn" class="btn btn-purple">✨ Get Details</button>
+    </div>
+
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <div class="card-title" style="margin: 0;">📑 Results</div>
+        <button id="clearResultsBtn" class="btn btn-blue" style="width: auto; margin: 0; padding: 4px 8px;">
+          🗑️
+        </button>
+      </div>
+      <div id="results" class="results"></div>
     </div>
   </div>
+
   <div id="toastContainer" class="toast-container"></div>
+
   <script src="popup.js"></script>
 </body>
 
