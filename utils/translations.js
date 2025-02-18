@@ -81,5 +81,44 @@ export const translations = {
     copied: "Copiato! 📋",
     cleared: "Risultati cancellati 🗑️"
     // Add Italian translations for all keys ...
+  },
+  es: {
+    youtubeUrl: "🔗 URL de YouTube",
+    getInfo: "✨ Obtener Info",
+    videoTitle: "🎬 Título",
+    videoDescription: "📝 Descripción",
+    songSearch: "🎵 Buscar canción",
+    searchSpotify: "🔍 Buscar en Spotify",
+    spotifyLinkPlaceholder: "🔗 O pega el enlace de Spotify aquí",
+    getDetails: "✨ Obtener Detalles",
+    results: "📑 Resultados",
+    settings: "⚙️ Configuración",
+    // ... more Spanish translations
+  },
+  fr: {
+    youtubeUrl: "🔗 URL YouTube",
+    getInfo: "✨ Obtenir Info",
+    videoTitle: "🎬 Titre",
+    videoDescription: "📝 Description",
+    songSearch: "🎵 Rechercher chanson",
+    searchSpotify: "🔍 Chercher sur Spotify",
+    spotifyLinkPlaceholder: "🔗 Ou collez le lien Spotify ici",
+    getDetails: "✨ Obtenir Détails",
+    results: "📑 Résultats",
+    settings: "⚙️ Paramètres",
+    // ... more French translations
+  },
+  de: {
+    youtubeUrl: "🔗 YouTube URL",
+    getInfo: "✨ Info abrufen",
+    videoTitle: "🎬 Titel",
+    videoDescription: "📝 Beschreibung",
+    songSearch: "🎵 Lied suchen",
+    searchSpotify: "🔍 Auf Spotify suchen",
+    spotifyLinkPlaceholder: "🔗 Oder Spotify-Link hier einfügen",
+    getDetails: "✨ Details abrufen",
+    results: "📑 Ergebnisse",
+    settings: "⚙️ Einstellungen",
+    // ... more German translations
   }
 };

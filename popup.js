@@ -1,5 +1,48 @@
 import { translations } from './utils/translations.js';
 import { showToast } from './utils/toast.js';
+import { SearchHistory } from './utils/searchHistory.js';
+import { compareTracksFeature } from './utils/trackCompare.js';
+import { Statistics } from './utils/statistics.js';
+import { showUserGuide } from './utils/guide.js';
+
+function addBatchProcessingFeature() {
+  const batchUploadBtn = document.createElement('button');
+  batchUploadBtn.className = 'btn btn-purple';
+  batchUploadBtn.innerHTML = '📄 Batch Process';
+  
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = '.txt,.csv';
+  fileInput.style.display = 'none';
+  
+  batchUploadBtn.addEventListener('click', () => fileInput.click());
+  
+  fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const links = e.target.result.split('\n')
+        .map(link => link.trim())
+        .filter(link => link.includes('youtube.com/watch') || link.includes('spotify.com/track'));
+      
+      showToast(`Processing ${links.length} links...`);
+      
+      for (const link of links) {
+        if (link.includes('youtube.com')) {
+          await fetchYouTubeInfo(link);
+        } else if (link.includes('spotify.com')) {
+          const trackId = parseSpotifyId(link, 'track');
+          if (trackId) await getSpotifyTrackDetails(trackId);
+        }
+      }
+    };
+    reader.readAsText(file);
+  });
+  
+  document.querySelector('.card').insertBefore(batchUploadBtn, document.querySelector('.input-group'));
+}
 
 const openOptionsBtn = document.getElementById("openOptionsBtn");
 const youtubeLinkInput = document.getElementById("youtubeLinkInput");
@@ -358,6 +401,70 @@ function buildTrackSearchRow(track, query) {
   }
 }
 
+// Add after buildTrackSearchRow function
+function addAudioPreviewFeature() {
+  let currentAudio = null;
+  
+  function createAudioPlayer(previewUrl, trackName) {
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio = null;
+    }
+    
+    if (!previewUrl) return null;
+    
+    const audio = new Audio(previewUrl);
+    const playerContainer = document.createElement('div');
+    playerContainer.className = 'audio-preview';
+    
+    const playBtn = document.createElement('button');
+    playBtn.className = 'action-button';
+    playBtn.innerHTML = '▶️';
+    
+    const progress = document.createElement('div');
+    progress.className = 'progress-bar';
+    
+    playerContainer.appendChild(playBtn);
+    playerContainer.appendChild(progress);
+    
+    playBtn.addEventListener('click', () => {
+      if (audio.paused) {
+        audio.play();
+        playBtn.innerHTML = '⏸️';
+      } else {
+        audio.pause();
+        playBtn.innerHTML = '▶️';
+      }
+    });
+    
+    audio.addEventListener('timeupdate', () => {
+      const percent = (audio.currentTime / audio.duration) * 100;
+      progress.style.width = `${percent}%`;
+    });
+    
+    audio.addEventListener('ended', () => {
+      playBtn.innerHTML = '▶️';
+      progress.style.width = '0%';
+    });
+    
+    currentAudio = audio;
+    return playerContainer;
+  }
+  
+  // Modify buildTrackSearchRow to include audio preview
+  const originalBuildTrackSearchRow = buildTrackSearchRow;
+  buildTrackSearchRow = function(track, query) {
+    const row = originalBuildTrackSearchRow(track, query);
+    if (track.preview_url) {
+      const player = createAudioPlayer(track.preview_url, track.name);
+      if (player) {
+        row.querySelector('.result-actions').appendChild(player);
+      }
+    }
+    return row;
+  };
+}
+
 fetchSpotifyLinksBtn.addEventListener("click", () => {
   try {
     const raw = manualSpotifyInput.value.trim();
@@ -457,6 +564,128 @@ function buildTrackDetailsCard(trackData, audioFeatures) {
   }
 }
 
+// Add after buildTrackDetailsCard function
+function addSimilarTracksFeature() {
+  async function getSimilarTracks(trackId) {
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage(
+        { 
+          action: "GET_SIMILAR_TRACKS", 
+          trackId 
+        }, 
+        (response) => resolve(response)
+      );
+    });
+  }
+  
+  // Modify buildTrackDetailsCard to include similar tracks button
+  const originalBuildTrackDetailsCard = buildTrackDetailsCard;
+  buildTrackDetailsCard = function(trackData, audioFeatures) {
+    const card = originalBuildTrackDetailsCard(trackData, audioFeatures);
+    
+    const similarBtn = document.createElement('button');
+    similarBtn.className = 'action-button';
+    similarBtn.innerHTML = '🎵 Similar';
+    
+    similarBtn.addEventListener('click', async () => {
+      const response = await getSimilarTracks(trackData.id);
+      if (response?.success) {
+        const similarTracksContainer = document.createElement('div');
+        similarTracksContainer.className = 'similar-tracks';
+        response.tracks.forEach(track => {
+          buildTrackSearchRow(track, '');
+        });
+      }
+    });
+    
+    card.querySelector('.result-actions').appendChild(similarBtn);
+    return card;
+  };
+}
+
+// Add after getSpotifyTrackDetails function
+async function addLyricsFeature() {
+  const searchLyrics = async (artist, title) => {
+    try {
+      const response = await fetch(`https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(title)}`);
+      const data = await response.json();
+      return data.lyrics;
+    } catch (error) {
+      console.error('Lyrics fetch error:', error);
+      return null;
+    }
+  };
+  
+  const showLyrics = (lyrics, title) => {
+    const modal = document.createElement('div');
+    modal.className = 'lyrics-modal';
+    modal.innerHTML = `
+      <div class="lyrics-content">
+        <h3>${title}</h3>
+        <pre>${lyrics || 'Lyrics not found'}</pre>
+        <button class="btn btn-blue">Close</button>
+      </div>
+    `;
+    
+    modal.querySelector('button').addEventListener('click', () => {
+      document.body.removeChild(modal);
+    });
+    
+    document.body.appendChild(modal);
+  };
+  
+  // Modify buildTrackDetailsCard to include lyrics button
+  const originalBuildTrackDetailsCard = buildTrackDetailsCard;
+  buildTrackDetailsCard = function(trackData, audioFeatures) {
+    const card = originalBuildTrackDetailsCard(trackData, audioFeatures);
+    
+    const lyricsBtn = document.createElement('button');
+    lyricsBtn.className = 'action-button';
+    lyricsBtn.innerHTML = '📝 Lyrics';
+    lyricsBtn.addEventListener('click', async () => {
+      const lyrics = await searchLyrics(trackData.artists[0].name, trackData.name);
+      showLyrics(lyrics, trackData.name);
+    });
+    
+    card.querySelector('.result-actions').appendChild(lyricsBtn);
+    return card;
+  };
+}
+
+// Add after buildTrackDetailsCard function
+function addExportFeature() {
+  const exportBtn = document.createElement('button');
+  exportBtn.className = 'btn btn-blue';
+  exportBtn.innerHTML = '📥 Export Results';
+  exportBtn.style.marginLeft = '8px';
+  
+  exportBtn.addEventListener('click', () => {
+    const results = Array.from(resultsDiv.querySelectorAll('.result-item')).map(item => ({
+      title: item.querySelector('.result-title').textContent,
+      artist: item.querySelector('.result-subtitle').textContent.split('•')[0].trim(),
+      isrc: item.querySelector('[data-value]')?.getAttribute('data-value') || 'N/A',
+      upc: item.querySelectorAll('[data-value]')[1]?.getAttribute('data-value') || 'N/A'
+    }));
+    
+    const csv = [
+      ['Title', 'Artist', 'ISRC', 'UPC'],
+      ...results.map(r => [r.title, r.artist, r.isrc, r.upc])
+    ].map(row => row.join(',')).join('\n');
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'isrc_results.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+  
+  document.querySelector('#clearResultsBtn').parentNode.appendChild(exportBtn);
+}
+
 clearResultsBtn.addEventListener("click", () => {
   try {
     resultsDiv.innerHTML = "";
@@ -521,6 +750,23 @@ document.addEventListener("DOMContentLoaded", async () => {
       const selectedLang = this.value;
       updateLanguage(selectedLang);
     });
+
+    // Add batch processing feature
+    addBatchProcessingFeature();
+    addExportFeature();
+    addAudioPreviewFeature();
+    addLyricsFeature();
+    addSimilarTracksFeature();
+
+    const searchHistory = new SearchHistory();
+    const compareBtn = compareTracksFeature(resultsDiv);
+    document.querySelector('.card').appendChild(compareBtn);
+    
+    // Show user guide on first visit
+    if (!localStorage.getItem('guideSeen')) {
+      showUserGuide(currentLang);
+      localStorage.setItem('guideSeen', 'true');
+    }
 
   } catch (error) {
     console.error("DOMContentLoaded error:", error);
