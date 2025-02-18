@@ -760,7 +760,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const searchHistory = new SearchHistory();
     const compareBtn = compareTracksFeature(resultsDiv);
-    document.querySelector('.card').appendChild(compareBtn);
+    // document.querySelector('.card').appendChild(compareBtn);
     
     // Show user guide on first visit
     if (!localStorage.getItem('guideSeen')) {
