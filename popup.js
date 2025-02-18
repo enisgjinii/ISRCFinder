@@ -12,10 +12,6 @@ function addBatchProcessingFeature() {
   
   const fileInput = document.createElement('input');
   fileInput.type = 'file';
-  fileInput.accept = '.txt,.csv';
-  fileInput.style.display = 'none';
-  
-  batchUploadBtn.addEventListener('click', () => fileInput.click());
   
   fileInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
@@ -757,16 +753,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     addAudioPreviewFeature();
     addLyricsFeature();
     addSimilarTracksFeature();
-
-    const searchHistory = new SearchHistory();
-    const compareBtn = compareTracksFeature(resultsDiv);
-    document.querySelector('.card').appendChild(compareBtn);
-    
-    // Show user guide on first visit
-    if (!localStorage.getItem('guideSeen')) {
-      showUserGuide(currentLang);
-      localStorage.setItem('guideSeen', 'true');
-    }
 
   } catch (error) {
     console.error("DOMContentLoaded error:", error);
