@@ -1,57 +1,72 @@
-# Kërkuesi i Avancuar i Spotify (Cross-Browser)
+# 🎵 ISRCFinder - ISRC Code Extractor
 
-This extension finds metadata for Spotify tracks and albums—including ISRC, UPC, Audio Features, and album info—using a single codebase that works across Chrome, Firefox, and Edge.
+ISRCFinder is a browser extension designed to help users find **International Standard Recording Codes (ISRCs)** from various online music platforms. The ISRC is a unique identifier for music recordings, useful for musicians, producers, and rights holders.
 
-## File Structure
+## 🚀 Features
+- Extract **ISRC codes** from supported music streaming services.
+- Easy-to-use **popup interface**.
+- **Background script** processes web pages automatically.
+- **Customizable settings** to enhance user experience.
+- Works on **Chrome** and **Firefox**.
 
-- **[background.js](background.js)**  
-  Contains the background service which handles fetching Spotify tokens and retrieving track, album, and search data from the Spotify API.
+## 🛠 Installation
 
-- **[manifest.json](manifest.json)**  
-  Defines the extension metadata, permissions, and configuration including the popup and options pages.
+### 🔹 Install Manually (Developer Mode)
+1. **Download** the repository:
+   ```sh
+   git clone https://github.com/enisgjinii/ISRCFinder.git
+   cd ISRCFinder
+   ```
+2. Open **Google Chrome** and go to:
+   ```
+   chrome://extensions/
+   ```
+3. **Enable Developer Mode** (toggle switch in the top-right).
+4. Click **"Load unpacked"** and select the `ISRCFinder` folder.
+5. The extension is now installed and ready to use!
 
-- **[popup.html](popup.html)** and **[popup.js](popup.js)**  
-  Provide the main UI for the extension. Users can detect the current tab (Spotify or YouTube), enter URLs, and search for tracks/albums.
+## 🎮 How to Use
+1. Navigate to a music streaming platform (e.g., Spotify, YouTube, or others).
+2. Click the **ISRCFinder icon** in the browser toolbar.
+3. The popup will display the extracted **ISRC codes**.
+4. Copy and use the codes for your records or music rights management.
 
-- **[options.html](options.html)** and **[options.js](options.js)**  
-  Allow users to save their Spotify Client ID and Secret credentials, set the duration for saved credentials, and test the credentials.
+## 📁 Project Structure
+```
+ISRCFinder/
+│── background.js     # Background script for processing ISRC codes
+│── manifest.json     # Browser extension manifest file
+│── popup.html        # HTML structure for the extension popup
+│── popup.js          # JavaScript logic for the popup UI
+│── options.html      # Settings page for the extension
+│── options.js        # JavaScript logic for settings
+│── style.css         # CSS styles for the popup and settings
+│── icons/            # Extension icons
+│── utils/            # Utility scripts (if any)
+```
 
-- **[style.css](style.css)**  
-  Contains the shared styles for the popup and options pages including dark mode, layout, buttons, cards, and animations.
+## 🔧 Technologies Used
+- **JavaScript** – For core functionality.
+- **HTML & CSS** – For the UI.
+- **Chrome Extension APIs** – For accessing and modifying web pages.
 
-## Features
+## 📌 Future Improvements
+- Support for more streaming platforms.
+- Option to export ISRC codes to CSV.
+- Improved UI/UX for better usability.
 
-- **Spotify API Integration:**  
-  Uses stored credentials to request a Spotify token and fetch metadata from endpoints such as `/v1/tracks`, `/v1/albums`, `/v1/search`, etc.
+## 🤝 Contributing
+Contributions are welcome! Feel free to **fork** the repo and submit a **pull request**.
 
-- **YouTube to Spotify Workflow:**  
-  Detects YouTube pages for videos, extracts the title, and performs a search on Spotify for similar tracks.
+1. Fork the project.
+2. Create a feature branch (`git checkout -b feature-name`).
+3. Commit your changes (`git commit -m "Added new feature"`).
+4. Push to your branch (`git push origin feature-name`).
+5. Open a pull request.
 
-- **Dark Mode and Expanded View:**  
-  Supports toggling dark mode and expanding the popup view for a better user experience.
+## 📜 License
+This project is licensed under the **MIT License** – see the [LICENSE](LICENSE) file for details.
 
-- **Credential Management:**  
-  An options page to save, test, and clear Spotify credentials that are stored locally.
+---
 
-- **Result Export:**  
-  Users can copy metadata (e.g. ISRC, UPC) to the clipboard or download JSON files containing detailed track/album information.
-
-## Installation
-
-1. Clone or download the repository.
-2. Open Google Chrome (or Firefox/Edge) and navigate to the extensions page.
-3. Enable Developer Mode.
-4. Click "Load unpacked" and select the project folder.
-5. The extension icon should now be visible in your browser.
-
-## Usage
-
-- **Popup:**  
-  Click the extension icon to open the popup. Use the buttons to detect the current tab or enter Spotify URLs manually. You can also search for tracks or albums.
-
-- **Options:**  
-  Click the "⚙️ Opsionet" button in the popup to open the options page. Enter your Spotify Client ID and Secret, choose how long the credentials remain valid, and test the credentials.
-
-## License
-
-This project is for demonstration purposes. Note that storing credentials locally is not recommended for production environments.
+### 🎧 Happy Music Tracking! 🎶
