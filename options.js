@@ -31,26 +31,26 @@ function validateSettings() {
   const spotifyClientId = document.getElementById('spotifyClientId').value.trim();
   const spotifyClientSecret = document.getElementById('spotifyClientSecret').value.trim();
   const youtubeApiKey = document.getElementById('youtubeApiKey').value.trim();
-  
+
   const errors = [];
-  
+
   if (!spotifyClientId) errors.push(languages[currentLang].spotifyClientIdRequired);
   if (!spotifyClientSecret) errors.push(languages[currentLang].spotifyClientSecretRequired);
   if (!youtubeApiKey) errors.push(languages[currentLang].youtubeApiKeyRequired);
-  
+
   if (spotifyClientId && !/^[0-9a-f]{32}$/i.test(spotifyClientId)) {
     errors.push(languages[currentLang].invalidSpotifyClientId);
   }
-  
+
   if (spotifyClientSecret && !/^[0-9a-f]{32}$/i.test(spotifyClientSecret)) {
     errors.push(languages[currentLang].invalidSpotifyClientSecret);
   }
-  
+
   if (errors.length > 0) {
     errors.forEach(error => showToast(error, 'error'));
     return false;
   }
-  
+
   return true;
 }
 
@@ -76,9 +76,9 @@ async function testConnection() {
     const testBtn = document.getElementById('testBtn');
     testBtn.disabled = true;
     testBtn.innerHTML = '⌛ Testing...';
-    
+
     const response = await chrome.runtime.sendMessage({ action: "TEST_CREDENTIALS" });
-    
+
     if (response.success) {
       showLocalizedToast('connectionTestSuccess', 'success');
     } else {
@@ -112,7 +112,7 @@ document.addEventListener('DOMContentLoaded', function () {
           showLocalizedToast('spotifyCredentialsExpired');
           return;
         }
-        
+
         if (data.spotifyClientId) document.getElementById('spotifyClientId').value = data.spotifyClientId;
         if (data.spotifyClientSecret) document.getElementById('spotifyClientSecret').value = data.spotifyClientSecret;
         if (data.youtubeApiKey) document.getElementById('youtubeApiKey').value = data.youtubeApiKey;
@@ -125,16 +125,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Initialize language selector
   const languageSelect = document.getElementById('languageSelect');
-  
+
   // Load saved language preference
-  chrome.storage.local.get('language', function(data) {
+  chrome.storage.local.get('language', function (data) {
     const savedLang = data.language || 'en';
     languageSelect.value = savedLang;
     updateLanguage(savedLang);
   });
 
   // Handle language changes
-  languageSelect.addEventListener('change', function() {
+  languageSelect.addEventListener('change', function () {
     const selectedLang = this.value;
     updateLanguage(selectedLang);
     chrome.storage.local.set({ language: selectedLang });
@@ -186,7 +186,7 @@ document.addEventListener('DOMContentLoaded', function () {
             showLocalizedToast('errorClearingSettings');
             return;
           }
-          
+
           document.getElementById('spotifyClientId').value = '';
           document.getElementById('spotifyClientSecret').value = '';
           document.getElementById('youtubeApiKey').value = '';
@@ -215,11 +215,11 @@ document.addEventListener('DOMContentLoaded', function () {
     header.addEventListener('click', function () {
       const section = this.parentElement;
       const wasActive = section.classList.contains('active');
-      
+
       document.querySelectorAll('.section').forEach(s => {
         s.classList.remove('active');
       });
-      
+
       if (!wasActive) {
         section.classList.add('active');
       }

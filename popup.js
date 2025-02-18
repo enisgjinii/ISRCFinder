@@ -9,22 +9,26 @@ function addBatchProcessingFeature() {
   const batchUploadBtn = document.createElement('button');
   batchUploadBtn.className = 'btn btn-purple';
   batchUploadBtn.innerHTML = '📄 Batch Process';
-  
+
   const fileInput = document.createElement('input');
   fileInput.type = 'file';
-  
+  fileInput.accept = '.txt,.csv';
+  fileInput.style.display = 'none';
+
+  batchUploadBtn.addEventListener('click', () => fileInput.click());
+
   fileInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
+
     const reader = new FileReader();
     reader.onload = async (e) => {
       const links = e.target.result.split('\n')
         .map(link => link.trim())
         .filter(link => link.includes('youtube.com/watch') || link.includes('spotify.com/track'));
-      
+
       showToast(`Processing ${links.length} links...`);
-      
+
       for (const link of links) {
         if (link.includes('youtube.com')) {
           await fetchYouTubeInfo(link);
@@ -36,7 +40,7 @@ function addBatchProcessingFeature() {
     };
     reader.readAsText(file);
   });
-  
+
   document.querySelector('.card').insertBefore(batchUploadBtn, document.querySelector('.input-group'));
 }
 
@@ -87,7 +91,7 @@ async function getCurrentTab() {
     if (!chrome.tabs) {
       throw new Error('Chrome tabs API not available');
     }
-    
+
     const queryOptions = { active: true, currentWindow: true };
     const tabs = await new Promise((resolve, reject) => {
       chrome.tabs.query(queryOptions, (tabs) => {
@@ -229,7 +233,7 @@ function setLoading(isLoading) {
 // Enhanced error handling
 async function handleError(error, context) {
   console.error(`Error in ${context}:`, error);
-  
+
   let errorMessage;
   if (error.message.includes('Network Error')) {
     errorMessage = translations[currentLang].networkError;
@@ -240,7 +244,7 @@ async function handleError(error, context) {
   } else {
     errorMessage = `${translations[currentLang].generalError}: ${error.message}`;
   }
-  
+
   showLocalizedToast(errorMessage, 'error');
 }
 
@@ -252,7 +256,7 @@ async function fetchYouTubeInfo(url) {
       showLocalizedToast('pleaseProvideValidYouTubeUrl', 'error');
       return false;
     }
-    
+
     const videoId = parseYouTubeId(url);
     if (!videoId) {
       showLocalizedToast("invalidYouTubeUrlFormat", "error");
@@ -307,7 +311,7 @@ async function doSpotifySearch(query) {
       showLocalizedToast('invalidSearchQuery', 'error');
       return;
     }
-    
+
     resultsDiv.innerHTML = "";
     chrome.runtime.sendMessage({ action: "SEARCH_SPOTIFY_TRACKS", query }, (resp) => {
       if (!resp || !resp.success) {
@@ -365,7 +369,7 @@ function buildTrackSearchRow(track, query) {
     if (!track || !track.name) {
       throw new Error('Invalid track data');
     }
-    
+
     const simScore = computeSimilarity(query, track.name);
     const row = document.createElement("div");
     row.classList.add("result-item");
@@ -400,29 +404,29 @@ function buildTrackSearchRow(track, query) {
 // Add after buildTrackSearchRow function
 function addAudioPreviewFeature() {
   let currentAudio = null;
-  
+
   function createAudioPlayer(previewUrl, trackName) {
     if (currentAudio) {
       currentAudio.pause();
       currentAudio = null;
     }
-    
+
     if (!previewUrl) return null;
-    
+
     const audio = new Audio(previewUrl);
     const playerContainer = document.createElement('div');
     playerContainer.className = 'audio-preview';
-    
+
     const playBtn = document.createElement('button');
     playBtn.className = 'action-button';
     playBtn.innerHTML = '▶️';
-    
+
     const progress = document.createElement('div');
     progress.className = 'progress-bar';
-    
+
     playerContainer.appendChild(playBtn);
     playerContainer.appendChild(progress);
-    
+
     playBtn.addEventListener('click', () => {
       if (audio.paused) {
         audio.play();
@@ -432,24 +436,24 @@ function addAudioPreviewFeature() {
         playBtn.innerHTML = '▶️';
       }
     });
-    
+
     audio.addEventListener('timeupdate', () => {
       const percent = (audio.currentTime / audio.duration) * 100;
       progress.style.width = `${percent}%`;
     });
-    
+
     audio.addEventListener('ended', () => {
       playBtn.innerHTML = '▶️';
       progress.style.width = '0%';
     });
-    
+
     currentAudio = audio;
     return playerContainer;
   }
-  
+
   // Modify buildTrackSearchRow to include audio preview
   const originalBuildTrackSearchRow = buildTrackSearchRow;
-  buildTrackSearchRow = function(track, query) {
+  buildTrackSearchRow = function (track, query) {
     const row = originalBuildTrackSearchRow(track, query);
     if (track.preview_url) {
       const player = createAudioPlayer(track.preview_url, track.name);
@@ -565,24 +569,24 @@ function addSimilarTracksFeature() {
   async function getSimilarTracks(trackId) {
     return new Promise((resolve) => {
       chrome.runtime.sendMessage(
-        { 
-          action: "GET_SIMILAR_TRACKS", 
-          trackId 
-        }, 
+        {
+          action: "GET_SIMILAR_TRACKS",
+          trackId
+        },
         (response) => resolve(response)
       );
     });
   }
-  
+
   // Modify buildTrackDetailsCard to include similar tracks button
   const originalBuildTrackDetailsCard = buildTrackDetailsCard;
-  buildTrackDetailsCard = function(trackData, audioFeatures) {
+  buildTrackDetailsCard = function (trackData, audioFeatures) {
     const card = originalBuildTrackDetailsCard(trackData, audioFeatures);
-    
+
     const similarBtn = document.createElement('button');
     similarBtn.className = 'action-button';
     similarBtn.innerHTML = '🎵 Similar';
-    
+
     similarBtn.addEventListener('click', async () => {
       const response = await getSimilarTracks(trackData.id);
       if (response?.success) {
@@ -593,7 +597,7 @@ function addSimilarTracksFeature() {
         });
       }
     });
-    
+
     card.querySelector('.result-actions').appendChild(similarBtn);
     return card;
   };
@@ -611,7 +615,7 @@ async function addLyricsFeature() {
       return null;
     }
   };
-  
+
   const showLyrics = (lyrics, title) => {
     const modal = document.createElement('div');
     modal.className = 'lyrics-modal';
@@ -622,19 +626,19 @@ async function addLyricsFeature() {
         <button class="btn btn-blue">Close</button>
       </div>
     `;
-    
+
     modal.querySelector('button').addEventListener('click', () => {
       document.body.removeChild(modal);
     });
-    
+
     document.body.appendChild(modal);
   };
-  
+
   // Modify buildTrackDetailsCard to include lyrics button
   const originalBuildTrackDetailsCard = buildTrackDetailsCard;
-  buildTrackDetailsCard = function(trackData, audioFeatures) {
+  buildTrackDetailsCard = function (trackData, audioFeatures) {
     const card = originalBuildTrackDetailsCard(trackData, audioFeatures);
-    
+
     const lyricsBtn = document.createElement('button');
     lyricsBtn.className = 'action-button';
     lyricsBtn.innerHTML = '📝 Lyrics';
@@ -642,7 +646,7 @@ async function addLyricsFeature() {
       const lyrics = await searchLyrics(trackData.artists[0].name, trackData.name);
       showLyrics(lyrics, trackData.name);
     });
-    
+
     card.querySelector('.result-actions').appendChild(lyricsBtn);
     return card;
   };
@@ -654,7 +658,7 @@ function addExportFeature() {
   exportBtn.className = 'btn btn-blue';
   exportBtn.innerHTML = '📥 Export Results';
   exportBtn.style.marginLeft = '8px';
-  
+
   exportBtn.addEventListener('click', () => {
     const results = Array.from(resultsDiv.querySelectorAll('.result-item')).map(item => ({
       title: item.querySelector('.result-title').textContent,
@@ -662,12 +666,12 @@ function addExportFeature() {
       isrc: item.querySelector('[data-value]')?.getAttribute('data-value') || 'N/A',
       upc: item.querySelectorAll('[data-value]')[1]?.getAttribute('data-value') || 'N/A'
     }));
-    
+
     const csv = [
       ['Title', 'Artist', 'ISRC', 'UPC'],
       ...results.map(r => [r.title, r.artist, r.isrc, r.upc])
     ].map(row => row.join(',')).join('\n');
-    
+
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -678,7 +682,7 @@ function addExportFeature() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   });
-  
+
   document.querySelector('#clearResultsBtn').parentNode.appendChild(exportBtn);
 }
 
@@ -707,7 +711,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     // Load configuration
     const config = await loadConfig();
-    
+
     // Load saved YouTube info from localStorage if it exists
     const savedTitle = localStorage.getItem("youtubeTitle");
     const savedDescription = localStorage.getItem("youtubeDescription");
@@ -719,7 +723,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     await autoFetchFromCurrentTab();
 
     // Load saved language preference
-    chrome.storage.local.get('language', function(data) {
+    chrome.storage.local.get('language', function (data) {
       const savedLang = data.language || 'en';
       updateLanguage(savedLang);
     });
@@ -733,16 +737,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Initialize language selector
     const languageSelect = document.getElementById('languageSelect');
-    
+
     // Load saved language preference
-    chrome.storage.local.get('language', function(data) {
+    chrome.storage.local.get('language', function (data) {
       const savedLang = data.language || 'en';
       languageSelect.value = savedLang;
       updateLanguage(savedLang);
     });
 
     // Handle language changes
-    languageSelect.addEventListener('change', function() {
+    languageSelect.addEventListener('change', function () {
       const selectedLang = this.value;
       updateLanguage(selectedLang);
     });
@@ -753,6 +757,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     addAudioPreviewFeature();
     addLyricsFeature();
     addSimilarTracksFeature();
+
+    const searchHistory = new SearchHistory();
+    const compareBtn = compareTracksFeature(resultsDiv);
+    document.querySelector('.card').appendChild(compareBtn);
+
+    // Show user guide on first visit
+    if (!localStorage.getItem('guideSeen')) {
+      showUserGuide(currentLang);
+      localStorage.setItem('guideSeen', 'true');
+    }
 
   } catch (error) {
     console.error("DOMContentLoaded error:", error);
