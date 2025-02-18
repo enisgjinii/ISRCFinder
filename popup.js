@@ -1,3 +1,6 @@
+import { translations } from './utils/translations.js';
+import { showToast } from './utils/toast.js';
+
 const openOptionsBtn = document.getElementById("openOptionsBtn");
 const youtubeLinkInput = document.getElementById("youtubeLinkInput");
 const fetchYouTubeBtn = document.getElementById("fetchYouTubeBtn");
@@ -11,6 +14,34 @@ const fetchSpotifyLinksBtn = document.getElementById("fetchSpotifyLinksBtn");
 const resultsDiv = document.getElementById("results");
 const clearResultsBtn = document.getElementById("clearResultsBtn");
 const toastContainer = document.getElementById("toastContainer");
+
+let currentLang = 'en';
+
+function updateLanguage(lang) {
+  currentLang = lang;
+  const texts = translations[lang];
+
+  // Update all placeholders and text content
+  document.getElementById('youtubeLinkInput').placeholder = texts.youtubeUrl;
+  document.getElementById('fetchYouTubeBtn').textContent = texts.getInfo;
+  document.querySelector('#youtubeInfo .info-title').textContent = texts.videoTitle;
+  document.querySelector('#youtubeInfo .info-title:nth-child(3)').textContent = texts.videoDescription;
+  document.getElementById('spotifySearchInput').placeholder = texts.songSearch;
+  document.getElementById('searchSpotifyBtn').textContent = texts.searchSpotify;
+  document.getElementById('manualSpotifyInput').placeholder = texts.spotifyLinkPlaceholder;
+  document.getElementById('fetchSpotifyLinksBtn').textContent = texts.getDetails;
+  document.querySelector('.card-title').textContent = texts.results;
+  document.getElementById('openOptionsBtn').title = texts.settings;
+
+  // Update language selector
+  const languageSelect = document.getElementById('languageSelect');
+  if (languageSelect) {
+    languageSelect.value = lang;
+  }
+
+  // Save language preference
+  chrome.storage.local.set({ language: lang });
+}
 
 async function getCurrentTab() {
   try {
@@ -30,7 +61,7 @@ async function getCurrentTab() {
     return tabs[0];
   } catch (error) {
     console.error("getCurrentTab error:", error);
-    showToast("Failed to get current tab", "error");
+    showLocalizedToast("failedToGetCurrentTab", "error");
     return null;
   }
 }
@@ -39,11 +70,11 @@ async function autoFetchFromCurrentTab() {
   try {
     const tab = await getCurrentTab();
     if (!tab) {
-      showToast("Could not access current tab", "error");
+      showLocalizedToast("couldNotAccessCurrentTab", "error");
       return;
     }
     if (!tab.url?.includes("youtube.com/watch")) {
-      showToast("Please open a YouTube video first", "warning");
+      showLocalizedToast("pleaseOpenYouTubeVideoFirst", "warning");
       return;
     }
     // Set the URL in the input and fetch info
@@ -51,12 +82,9 @@ async function autoFetchFromCurrentTab() {
     await fetchYouTubeInfo(tab.url);
   } catch (error) {
     console.error("Auto-fetch error:", error);
-    showToast("Failed to auto-fetch video info", "error");
+    showLocalizedToast("failedToAutoFetchVideoInfo", "error");
   }
 }
-
-// Import toast utility
-import { showToast } from './utils/toast.js';
 
 // Configuration loading
 async function loadConfig() {
@@ -64,7 +92,7 @@ async function loadConfig() {
     chrome.storage.sync.get(['apiKey', 'theme'], (config) => {
       if (chrome.runtime.lastError) {
         console.error('Config load error:', chrome.runtime.lastError);
-        showToast('Failed to load configuration', 'error');
+        showLocalizedToast('failedToLoadConfiguration', 'error');
         resolve({});
       } else {
         resolve(config);
@@ -144,31 +172,66 @@ function parseYouTubeId(url) {
   }
 }
 
+// Add loading state management
+function setLoading(isLoading) {
+  const buttons = document.querySelectorAll('.btn');
+  buttons.forEach(btn => {
+    btn.disabled = isLoading;
+    if (isLoading) {
+      btn.dataset.originalText = btn.innerHTML;
+      btn.innerHTML = '⌛ Loading...';
+    } else if (btn.dataset.originalText) {
+      btn.innerHTML = btn.dataset.originalText;
+      delete btn.dataset.originalText;
+    }
+  });
+}
+
+// Enhanced error handling
+async function handleError(error, context) {
+  console.error(`Error in ${context}:`, error);
+  
+  let errorMessage;
+  if (error.message.includes('Network Error')) {
+    errorMessage = translations[currentLang].networkError;
+  } else if (error.message.includes('API key')) {
+    errorMessage = translations[currentLang].invalidApiKey;
+  } else if (error.message.includes('quota')) {
+    errorMessage = translations[currentLang].quotaExceeded;
+  } else {
+    errorMessage = `${translations[currentLang].generalError}: ${error.message}`;
+  }
+  
+  showLocalizedToast(errorMessage, 'error');
+}
+
+// Enhanced fetch YouTube info
 async function fetchYouTubeInfo(url) {
   try {
+    setLoading(true);
     if (!url) {
-      showToast('Please provide a valid YouTube URL', 'error');
+      showLocalizedToast('pleaseProvideValidYouTubeUrl', 'error');
       return false;
     }
     
     const videoId = parseYouTubeId(url);
     if (!videoId) {
-      showToast("Invalid YouTube URL format", "error");
+      showLocalizedToast("invalidYouTubeUrlFormat", "error");
       return;
     }
     fetchYouTubeBtn.disabled = true;
-    showToast("Fetching video info...", "info");
+    showLocalizedToast("fetchingVideoInfo", "info");
     return new Promise((resolve) => {
       chrome.runtime.sendMessage({ action: "GET_YOUTUBE_SNIPPET", videoId }, (resp) => {
         fetchYouTubeBtn.disabled = false;
         if (!resp || !resp.success) {
-          showToast(`Error: ${resp?.error || "No response"}`, "error");
+          showLocalizedToast(`error: ${resp?.error || "noResponse"}`, "error");
           resolve(false);
           return;
         }
         const items = resp.youtubeData.items || [];
         if (!items.length) {
-          showToast("Video not found. 😕", "info");
+          showLocalizedToast("videoNotFound", "info");
           resolve(false);
           return;
         }
@@ -182,7 +245,7 @@ async function fetchYouTubeInfo(url) {
         localStorage.setItem("youtubeTitle", snippet.title || "");
         localStorage.setItem("youtubeDescription", snippet.description || "");
 
-        showToast("YouTube info fetched! 🎉", "success");
+        showLocalizedToast("youtubeInfoFetched", "success");
         // Auto-trigger Spotify search if a title exists
         if (snippet.title) {
           setTimeout(() => doSpotifySearch(snippet.title), 500);
@@ -191,52 +254,30 @@ async function fetchYouTubeInfo(url) {
       });
     });
   } catch (error) {
-    console.error("YouTube fetch error:", error);
-    showToast("Error fetching YouTube info.", "error");
-    fetchYouTubeBtn.disabled = false;
-    return false;
+    await handleError(error, 'fetchYouTubeInfo');
+  } finally {
+    setLoading(false);
   }
 }
 
-fetchYouTubeBtn.addEventListener("click", async () => {
-  const link = youtubeLinkInput.value.trim();
-  if (!link) {
-    showToast("Please enter a YouTube URL", "error");
-    return;
-  }
-  await fetchYouTubeInfo(link);
-});
-
-searchSpotifyBtn.addEventListener("click", () => {
+// Enhanced Spotify search
+async function doSpotifySearch(query) {
   try {
-    const query = spotifySearchInput.value.trim();
-    if (!query) {
-      showToast("Please enter a Spotify search query! 🔍", "error");
-      return;
-    }
-    doSpotifySearch(query);
-  } catch (error) {
-    console.error(error);
-    showToast("Error starting Spotify search.", "error");
-  }
-});
-
-function doSpotifySearch(query) {
-  try {
+    setLoading(true);
     if (!query || typeof query !== 'string') {
-      showToast('Invalid search query', 'error');
+      showLocalizedToast('invalidSearchQuery', 'error');
       return;
     }
     
     resultsDiv.innerHTML = "";
     chrome.runtime.sendMessage({ action: "SEARCH_SPOTIFY_TRACKS", query }, (resp) => {
       if (!resp || !resp.success) {
-        showToast(`Error: ${resp?.error || "No response"}`, "error");
+        showLocalizedToast(`error: ${resp?.error || "noResponse"}`, "error");
         return;
       }
       const items = resp.searchData.tracks?.items || [];
       if (!items.length) {
-        showToast("No songs found. 😕", "info");
+        showLocalizedToast("noSongsFound", "info");
         return;
       }
       let maxSim = 0;
@@ -257,18 +298,29 @@ function doSpotifySearch(query) {
           doSpotifySearch(fallbackQuery);
         });
         resultsDiv.appendChild(fallbackBtn);
-        showToast("Low similarity. Try with description?", "info");
+        showLocalizedToast("lowSimilarityTryWithDescription", "info");
       }
-      showToast(`Found ${items.length} songs! 🎶`, "success");
+      showLocalizedToast("foundSongs", "success");
       items.forEach((track) => buildTrackSearchRow(track, query));
       updateSavedResults();
     });
   } catch (error) {
-    console.error(error);
-    showToast("Error during Spotify search.", "error");
+    await handleError(error, 'doSpotifySearch');
+  } finally {
+    setLoading(false);
   }
 }
 
+// Add input validation
+function validateYouTubeUrl(url) {
+  const pattern = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/;
+  return pattern.test(url);
+}
+
+function validateSpotifyUrl(url) {
+  const pattern = /^(https?:\/\/)?(open\.)?spotify\.com\/(track|album|playlist)\/[a-zA-Z0-9]+$/;
+  return pattern.test(url);
+}
 function buildTrackSearchRow(track, query) {
   try {
     if (!track || !track.name) {
@@ -302,7 +354,7 @@ function buildTrackSearchRow(track, query) {
     updateSavedResults();
   } catch (error) {
     console.error(error);
-    showToast("Error building result row", "error");
+    showLocalizedToast("errorBuildingResultRow", "error");
   }
 }
 
@@ -310,7 +362,7 @@ fetchSpotifyLinksBtn.addEventListener("click", () => {
   try {
     const raw = manualSpotifyInput.value.trim();
     if (!raw) {
-      showToast("Please enter a Spotify link! 🔗", "error");
+      showLocalizedToast("pleaseEnterSpotifyLink", "error");
       return;
     }
     resultsDiv.innerHTML = "";
@@ -319,14 +371,14 @@ fetchSpotifyLinksBtn.addEventListener("click", () => {
       if (line.includes("spotify.com/track/")) {
         const trackId = parseSpotifyId(line, "track");
         if (trackId) getSpotifyTrackDetails(trackId);
-        else showToast(`Invalid link: ${line}`, "error");
+        else showLocalizedToast(`invalidLink: ${line}`, "error");
       } else {
-        showToast(`Unknown link: ${line}`, "error");
+        showLocalizedToast(`unknownLink: ${line}`, "error");
       }
     });
   } catch (error) {
     console.error(error);
-    showToast("Error processing the Spotify link.", "error");
+    showLocalizedToast("errorProcessingSpotifyLink", "error");
   }
 });
 
@@ -345,14 +397,14 @@ function getSpotifyTrackDetails(trackId) {
   try {
     chrome.runtime.sendMessage({ action: "GET_SPOTIFY_TRACK_DETAILS", trackId }, (resp) => {
       if (!resp || !resp.success) {
-        showToast(`Error: ${resp?.error || "No response"}`, "error");
+        showLocalizedToast(`error: ${resp?.error || "noResponse"}`, "error");
         return;
       }
       buildTrackDetailsCard(resp.trackData, resp.audioFeatures);
     });
   } catch (error) {
     console.error(error);
-    showToast("Error fetching track details.", "error");
+    showLocalizedToast("errorFetchingTrackDetails", "error");
   }
 }
 
@@ -390,10 +442,10 @@ function buildTrackDetailsCard(trackData, audioFeatures) {
         const val = btn.getAttribute("data-value");
         if (val && val !== "N/A") {
           navigator.clipboard.writeText(val)
-            .then(() => showToast(`Copied: ${val}`, "success"))
-            .catch(() => showToast("Copy failed", "error"));
+            .then(() => showLocalizedToast(`copied: ${val}`, "success"))
+            .catch(() => showLocalizedToast("copyFailed", "error"));
         } else {
-          showToast("Nothing to copy!", "warning");
+          showLocalizedToast("nothingToCopy", "warning");
         }
       });
     });
@@ -401,7 +453,7 @@ function buildTrackDetailsCard(trackData, audioFeatures) {
     updateSavedResults();
   } catch (error) {
     console.error(error);
-    showToast("Error building details card", "error");
+    showLocalizedToast("errorBuildingDetailsCard", "error");
   }
 }
 
@@ -409,10 +461,10 @@ clearResultsBtn.addEventListener("click", () => {
   try {
     resultsDiv.innerHTML = "";
     updateSavedResults();
-    showToast("Results cleared. 🗑️", "success");
+    showLocalizedToast("resultsCleared", "success");
   } catch (error) {
     console.error(error);
-    showToast("Error clearing results.", "error");
+    showLocalizedToast("errorClearingResults", "error");
   }
 });
 
@@ -422,7 +474,7 @@ openOptionsBtn.addEventListener("click", () => {
     else window.open(chrome.runtime.getURL("options.html"));
   } catch (error) {
     console.error(error);
-    showToast("Error opening options.", "error");
+    showLocalizedToast("errorOpeningOptions", "error");
   }
 });
 
@@ -440,8 +492,43 @@ document.addEventListener("DOMContentLoaded", async () => {
       videoDescriptionEl.textContent = savedDescription || "(No description)";
     }
     await autoFetchFromCurrentTab();
+
+    // Load saved language preference
+    chrome.storage.local.get('language', function(data) {
+      const savedLang = data.language || 'en';
+      updateLanguage(savedLang);
+    });
+
+    // Listen for language changes from options page
+    chrome.storage.onChanged.addListener((changes) => {
+      if (changes.language) {
+        updateLanguage(changes.language.newValue);
+      }
+    });
+
+    // Initialize language selector
+    const languageSelect = document.getElementById('languageSelect');
+    
+    // Load saved language preference
+    chrome.storage.local.get('language', function(data) {
+      const savedLang = data.language || 'en';
+      languageSelect.value = savedLang;
+      updateLanguage(savedLang);
+    });
+
+    // Handle language changes
+    languageSelect.addEventListener('change', function() {
+      const selectedLang = this.value;
+      updateLanguage(selectedLang);
+    });
+
   } catch (error) {
     console.error("DOMContentLoaded error:", error);
-    showToast("Failed to initialize extension", "error");
+    showLocalizedToast("failedToInitializeExtension", "error");
   }
 });
+
+function showLocalizedToast(key, type = 'info') {
+  const text = translations[currentLang][key] || key;
+  showToast(text, type);
+}

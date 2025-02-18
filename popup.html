@@ -433,6 +433,33 @@
       font-size: 12px;
       margin-top: 4px;
     }
+
+    /* Add this to your existing styles in popup.html */
+    .language-selector {
+      margin: 0 8px;
+    }
+
+    .language-selector select {
+      padding: 4px 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s ease;
+      min-width: 100px;
+    }
+
+    .language-selector select:hover {
+      border-color: var(--primary);
+    }
+
+    .language-selector select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+    }
   </style>
 </head>
 
@@ -443,6 +470,22 @@
         <button class="theme-btn" data-theme="system">💻</button>
         <button class="theme-btn" data-theme="light">☀️</button>
         <button class="theme-btn" data-theme="dark">🌙</button>
+      </div>
+      <div class="language-selector">
+        <select id="languageSelect">
+          <option value="en">🇬🇧 English</option>
+          <option value="sq">🇦🇱 Shqip</option>
+          <option value="nl">🇳🇱 Nederlands</option>
+          <option value="it">🇮🇹 Italiano</option>
+          <option value="es">🇪🇸 Español</option>
+          <option value="fr">🇫🇷 Français</option>
+          <option value="de">🇩🇪 Deutsch</option>
+          <option value="pt">🇵🇹 Português</option>
+          <option value="ru">🇷🇺 Русский</option>
+          <option value="ja">🇯🇵 日本語</option>
+          <option value="ko">🇰🇷 한국어</option>
+          <option value="zh">🇨🇳 中文</option>
+        </select>
       </div>
       <button id="openOptionsBtn" class="btn btn-green" style="width: auto; margin: 0; padding: 6px 10px;">
         ⚙️

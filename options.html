@@ -237,6 +237,33 @@
         transform: translateY(16px);
       }
     }
+
+    .language-selector {
+      position: absolute;
+      top: 24px;
+      right: 28px;
+    }
+
+    .language-selector select {
+      padding: 8px 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #1e293b;
+      background: #f8fafc;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .language-selector select:hover {
+      border-color: #cbd5e1;
+    }
+
+    .language-selector select:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
   </style>
 </head>
 
@@ -244,6 +271,15 @@
   <div class="options-container">
     <div class="header">
       <h1 class="title">⚙️ Extension Settings</h1>
+    </div>
+
+    <div class="language-selector">
+      <select id="languageSelect">
+        <option value="en">🇬🇧 English</option>
+        <option value="sq">🇦🇱 Shqip</option>
+        <option value="nl">🇳🇱 Nederlands</option>
+        <option value="it">🇮🇹 Italiano</option>
+      </select>
     </div>
 
     <div class="content">
