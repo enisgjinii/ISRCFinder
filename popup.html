@@ -434,7 +434,7 @@
       margin-top: 4px;
     }
 
-    /* Add this to your existing styles in popup.html */
+    /* Language selector */
     .language-selector {
       margin: 0 8px;
     }
@@ -461,34 +461,35 @@
       box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
     }
 
-    /* Add to existing styles */
+    /* Audio preview */
     .audio-preview {
       display: flex;
       align-items: center;
       gap: 8px;
       margin-left: 8px;
     }
-    
+
     .progress-bar {
       height: 4px;
       background: var(--primary);
       width: 0;
       transition: width 0.1s linear;
     }
-    
+
+    /* Lyrics modal */
     .lyrics-modal {
       position: fixed;
       top: 0;
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0,0,0,0.8);
+      background: rgba(0, 0, 0, 0.8);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 1000;
     }
-    
+
     .lyrics-content {
       background: var(--surface);
       padding: 20px;
@@ -497,62 +498,8 @@
       max-height: 80vh;
       overflow-y: auto;
     }
-    
-    .similar-tracks {
-      margin-top: 12px;
-      border-top: 1px solid var(--border);
-      padding-top: 12px;
-    }
 
-    /* Add to existing styles */
-    .selectable {
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-    
-    .selectable:hover {
-      background: var(--surface-hover);
-    }
-    
-    .selected {
-      border: 2px solid var(--primary) !important;
-      background: var(--surface-hover);
-    }
-    
-    .guide-modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0,0,0,0.8);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    }
-    
-    .guide-content {
-      background: var(--surface);
-      padding: 24px;
-      border-radius: 12px;
-      max-width: 80%;
-      max-height: 80vh;
-      overflow-y: auto;
-    }
-    
-    .guide-content h2 {
-      margin-bottom: 16px;
-    }
-    
-    .guide-content ul {
-      margin-bottom: 16px;
-      padding-left: 20px;
-    }
-    
-    .guide-content li {
-      margin-bottom: 8px;
-    }
+    /* Additional classes (selectable, guide, etc.) if needed. */
   </style>
 </head>
 
@@ -586,6 +533,7 @@
     </div>
 
     <div class="card">
+      <!-- Batch Process Button gets injected here via JS -->
       <div class="input-group">
         <input type="text" id="youtubeLinkInput" placeholder="🔗 YouTube URL" />
       </div>
@@ -622,6 +570,8 @@
 
   <div id="toastContainer" class="toast-container"></div>
 
+  <!-- Toast and other scripts -->
+  <!-- NOTE: Adjust paths to match your extension folder structure -->
   <script src="utils/toast.js" type="module"></script>
   <script src="popup.js" type="module"></script>
 </body>

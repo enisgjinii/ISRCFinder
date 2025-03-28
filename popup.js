@@ -1,48 +1,15 @@
+// popup.js
 import { translations } from './utils/translations.js';
 import { showToast } from './utils/toast.js';
-import { SearchHistory } from './utils/searchHistory.js';
-import { compareTracksFeature } from './utils/trackCompare.js';
-import { Statistics } from './utils/statistics.js';
-import { showUserGuide } from './utils/guide.js';
+// If you have specialized classes or utilities, import them here:
+// import { SearchHistory } from './utils/searchHistory.js';
+// import { compareTracksFeature } from './utils/trackCompare.js';
+// import { Statistics } from './utils/statistics.js';
+// import { showUserGuide } from './utils/guide.js';
 
-function addBatchProcessingFeature() {
-  const batchUploadBtn = document.createElement('button');
-  batchUploadBtn.className = 'btn btn-purple';
-  batchUploadBtn.innerHTML = '📄 Batch Process';
-  
-  const fileInput = document.createElement('input');
-  fileInput.type = 'file';
-  fileInput.accept = '.txt,.csv';
-  fileInput.style.display = 'none';
-  
-  batchUploadBtn.addEventListener('click', () => fileInput.click());
-  
-  fileInput.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const links = e.target.result.split('\n')
-        .map(link => link.trim())
-        .filter(link => link.includes('youtube.com/watch') || link.includes('spotify.com/track'));
-      
-      showToast(`Processing ${links.length} links...`);
-      
-      for (const link of links) {
-        if (link.includes('youtube.com')) {
-          await fetchYouTubeInfo(link);
-        } else if (link.includes('spotify.com')) {
-          const trackId = parseSpotifyId(link, 'track');
-          if (trackId) await getSpotifyTrackDetails(trackId);
-        }
-      }
-    };
-    reader.readAsText(file);
-  });
-  
-  document.querySelector('.card').insertBefore(batchUploadBtn, document.querySelector('.input-group'));
-}
+////////////////////////////////////////////////////////////////////////
+// Global selectors & variables
+////////////////////////////////////////////////////////////////////////
 
 const openOptionsBtn = document.getElementById("openOptionsBtn");
 const youtubeLinkInput = document.getElementById("youtubeLinkInput");
@@ -59,97 +26,19 @@ const clearResultsBtn = document.getElementById("clearResultsBtn");
 const toastContainer = document.getElementById("toastContainer");
 
 let currentLang = 'en';
+// We'll keep track of the active <audio> element so only one can play at a time
+let activeAudio = null;
 
-function updateLanguage(lang) {
-  currentLang = lang;
-  const texts = translations[lang];
+////////////////////////////////////////////////////////////////////////
+// 1. Theming & language initialization
+////////////////////////////////////////////////////////////////////////
 
-  // Update all placeholders and text content
-  document.getElementById('youtubeLinkInput').placeholder = texts.youtubeUrl;
-  document.getElementById('fetchYouTubeBtn').textContent = texts.getInfo;
-  document.querySelector('#youtubeInfo .info-title').textContent = texts.videoTitle;
-  document.querySelector('#youtubeInfo .info-title:nth-child(3)').textContent = texts.videoDescription;
-  document.getElementById('spotifySearchInput').placeholder = texts.songSearch;
-  document.getElementById('searchSpotifyBtn').textContent = texts.searchSpotify;
-  document.getElementById('manualSpotifyInput').placeholder = texts.spotifyLinkPlaceholder;
-  document.getElementById('fetchSpotifyLinksBtn').textContent = texts.getDetails;
-  document.querySelector('.card-title').textContent = texts.results;
-  document.getElementById('openOptionsBtn').title = texts.settings;
-
-  // Update language selector
-  const languageSelect = document.getElementById('languageSelect');
-  if (languageSelect) {
-    languageSelect.value = lang;
-  }
-
-  // Save language preference
-  chrome.storage.local.set({ language: lang });
-}
-
-async function getCurrentTab() {
-  try {
-    if (!chrome.tabs) {
-      throw new Error('Chrome tabs API not available');
-    }
-    
-    const queryOptions = { active: true, currentWindow: true };
-    const tabs = await new Promise((resolve, reject) => {
-      chrome.tabs.query(queryOptions, (tabs) => {
-        if (chrome.runtime.lastError) {
-          return reject(chrome.runtime.lastError);
-        }
-        resolve(tabs);
-      });
-    });
-    return tabs[0];
-  } catch (error) {
-    console.error("getCurrentTab error:", error);
-    showLocalizedToast("failedToGetCurrentTab", "error");
-    return null;
-  }
-}
-
-async function autoFetchFromCurrentTab() {
-  try {
-    const tab = await getCurrentTab();
-    if (!tab) {
-      showLocalizedToast("couldNotAccessCurrentTab", "error");
-      return;
-    }
-    if (!tab.url?.includes("youtube.com/watch")) {
-      showLocalizedToast("pleaseOpenYouTubeVideoFirst", "warning");
-      return;
-    }
-    // Set the URL in the input and fetch info
-    youtubeLinkInput.value = tab.url;
-    await fetchYouTubeInfo(tab.url);
-  } catch (error) {
-    console.error("Auto-fetch error:", error);
-    showLocalizedToast("failedToAutoFetchVideoInfo", "error");
-  }
-}
-
-// Configuration loading
-async function loadConfig() {
-  return new Promise((resolve) => {
-    chrome.storage.sync.get(['apiKey', 'theme'], (config) => {
-      if (chrome.runtime.lastError) {
-        console.error('Config load error:', chrome.runtime.lastError);
-        showLocalizedToast('failedToLoadConfiguration', 'error');
-        resolve({});
-      } else {
-        resolve(config);
-      }
-    });
-  });
-}
-
-// Theme handling
 const html = document.documentElement;
 const themeButtons = document.querySelectorAll(".theme-btn");
 const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
 const savedTheme = localStorage.getItem("theme") || "system";
 setTheme(savedTheme);
+
 themeButtons.forEach((btn) => {
   btn.addEventListener("click", () => {
     const theme = btn.dataset.theme;
@@ -157,6 +46,7 @@ themeButtons.forEach((btn) => {
     localStorage.setItem("theme", theme);
   });
 });
+
 function setTheme(theme) {
   themeButtons.forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.theme === theme);
@@ -168,87 +58,63 @@ function setTheme(theme) {
     html.classList.add(theme);
   }
 }
-prefersDark.addEventListener("change", (e) => {
+
+prefersDark.addEventListener("change", () => {
   if (localStorage.getItem("theme") === "system") {
     setTheme("system");
   }
 });
 
-// Save and load search results from localStorage
-function updateSavedResults() {
-  try {
-    localStorage.setItem("savedResults", resultsDiv.innerHTML);
-  } catch (error) {
-    console.error(error);
-  }
-}
-function loadSavedResults() {
-  try {
-    const saved = localStorage.getItem("savedResults");
-    if (saved) resultsDiv.innerHTML = saved;
-  } catch (error) {
-    console.error(error);
-  }
-}
-loadSavedResults();
+function updateLanguage(lang) {
+  currentLang = lang;
+  const texts = translations[lang] || translations.en;
 
-function computeSimilarity(str1, str2) {
-  try {
-    const set1 = new Set(str1.toLowerCase().split(/\s+/));
-    const set2 = new Set(str2.toLowerCase().split(/\s+/));
-    const intersection = new Set([...set1].filter((x) => set2.has(x)));
-    const union = new Set([...set1, ...set2]);
-    return union.size ? intersection.size / union.size : 0;
-  } catch (error) {
-    console.error(error);
-    return 0;
+  // Example: update placeholders/text
+  youtubeLinkInput.placeholder = texts.youtubeUrl || "🔗 YouTube URL";
+  fetchYouTubeBtn.textContent = texts.getInfo || "✨ Get Info";
+  // If you have multiple info-title elements, you'll need to carefully select them
+  document.querySelectorAll('#youtubeInfo .info-title')[0].textContent = texts.videoTitle || "🎬 Title";
+  document.querySelectorAll('#youtubeInfo .info-title')[1].textContent = texts.videoDescription || "📝 Description";
+  spotifySearchInput.placeholder = texts.songSearch || "🎵 Song title to search";
+  searchSpotifyBtn.textContent = texts.searchSpotify || "🔍 Search Spotify";
+  manualSpotifyInput.placeholder = texts.spotifyLinkPlaceholder || "🔗 Or paste Spotify link here";
+  fetchSpotifyLinksBtn.textContent = texts.getDetails || "✨ Get Details";
+  document.querySelector('.card-title').textContent = texts.results || "📑 Results";
+  openOptionsBtn.title = texts.settings || "Settings";
+
+  // Also set the language selector dropdown
+  const languageSelect = document.getElementById('languageSelect');
+  if (languageSelect) {
+    languageSelect.value = lang;
   }
+
+  // Save language preference
+  chrome.storage.local.set({ language: lang });
 }
 
+////////////////////////////////////////////////////////////////////////
+// 2. Handling YouTube info
+////////////////////////////////////////////////////////////////////////
+
+// We’ll use a more advanced string cleaning for the video title
+function cleanYouTubeTitle(title = "") {
+  return title
+    .replace(/\(.*?\)/g, "")   // remove parentheses
+    .replace(/\[.*?\]/g, "")   // remove brackets
+    .replace(/\b\d{4}\b/g, "") // remove standalone 4-digit years
+    .trim();
+}
+
+// Extract video ID from youtube.com URLs
 function parseYouTubeId(url) {
   try {
     const u = new URL(url);
     return u.searchParams.get("v");
   } catch (error) {
-    console.error(error);
     return null;
   }
 }
 
-// Add loading state management
-function setLoading(isLoading) {
-  const buttons = document.querySelectorAll('.btn');
-  buttons.forEach(btn => {
-    btn.disabled = isLoading;
-    if (isLoading) {
-      btn.dataset.originalText = btn.innerHTML;
-      btn.innerHTML = '⌛ Loading...';
-    } else if (btn.dataset.originalText) {
-      btn.innerHTML = btn.dataset.originalText;
-      delete btn.dataset.originalText;
-    }
-  });
-}
-
-// Enhanced error handling
-async function handleError(error, context) {
-  console.error(`Error in ${context}:`, error);
-  
-  let errorMessage;
-  if (error.message.includes('Network Error')) {
-    errorMessage = translations[currentLang].networkError;
-  } else if (error.message.includes('API key')) {
-    errorMessage = translations[currentLang].invalidApiKey;
-  } else if (error.message.includes('quota')) {
-    errorMessage = translations[currentLang].quotaExceeded;
-  } else {
-    errorMessage = `${translations[currentLang].generalError}: ${error.message}`;
-  }
-  
-  showLocalizedToast(errorMessage, 'error');
-}
-
-// Enhanced fetch YouTube info
 async function fetchYouTubeInfo(url) {
   try {
     setLoading(true);
@@ -256,14 +122,16 @@ async function fetchYouTubeInfo(url) {
       showLocalizedToast('pleaseProvideValidYouTubeUrl', 'error');
       return false;
     }
-    
     const videoId = parseYouTubeId(url);
     if (!videoId) {
       showLocalizedToast("invalidYouTubeUrlFormat", "error");
       return;
     }
-    fetchYouTubeBtn.disabled = true;
+
+    // Example: show a toast that we're fetching
     showLocalizedToast("fetchingVideoInfo", "info");
+    fetchYouTubeBtn.disabled = true;
+
     return new Promise((resolve) => {
       chrome.runtime.sendMessage({ action: "GET_YOUTUBE_SNIPPET", videoId }, (resp) => {
         fetchYouTubeBtn.disabled = false;
@@ -282,101 +150,123 @@ async function fetchYouTubeInfo(url) {
         youtubeInfoDiv.style.display = "block";
         videoTitleEl.textContent = snippet.title || "(No title)";
         videoDescriptionEl.textContent = snippet.description || "(No description)";
-        spotifySearchInput.value = snippet.title || "";
 
-        // Save the YouTube video info in localStorage
+        // Save to localStorage so we can restore if the user closes & reopens popup
         localStorage.setItem("youtubeTitle", snippet.title || "");
         localStorage.setItem("youtubeDescription", snippet.description || "");
 
         showLocalizedToast("youtubeInfoFetched", "success");
-        // Auto-trigger Spotify search if a title exists
-        if (snippet.title) {
-          setTimeout(() => doSpotifySearch(snippet.title), 500);
+
+        // Optionally auto-trigger Spotify search with a cleaned version
+        const cleanedTitle = cleanYouTubeTitle(snippet.title || "");
+        if (cleanedTitle) {
+          setTimeout(() => doSpotifySearch(cleanedTitle), 500);
         }
         resolve(true);
       });
     });
   } catch (error) {
-    await handleError(error, 'fetchYouTubeInfo');
+    console.error(error);
+    showLocalizedToast("failedToFetchYouTubeInfo", "error");
   } finally {
     setLoading(false);
   }
 }
 
-// Enhanced Spotify search
+////////////////////////////////////////////////////////////////////////
+// 3. Searching Spotify
+////////////////////////////////////////////////////////////////////////
+
+// Use Dice coefficient for more robust fuzzy matching
+function computeDiceCoefficient(str1, str2) {
+  const s1 = str1.toLowerCase().trim();
+  const s2 = str2.toLowerCase().trim();
+  if (!s1 || !s2) return 0;
+
+  const bigrams = (s) => {
+    const pairs = [];
+    for (let i = 0; i < s.length - 1; i++) {
+      pairs.push(s.slice(i, i + 2));
+    }
+    return pairs;
+  };
+
+  const bg1 = bigrams(s1);
+  const bg2 = bigrams(s2);
+
+  const map1 = new Map();
+  const map2 = new Map();
+
+  for (const b of bg1) {
+    map1.set(b, (map1.get(b) || 0) + 1);
+  }
+  for (const b of bg2) {
+    map2.set(b, (map2.get(b) || 0) + 1);
+  }
+
+  let intersection = 0;
+  for (const [b, freq] of map1) {
+    if (map2.has(b)) {
+      intersection += Math.min(freq, map2.get(b));
+    }
+  }
+  return (2.0 * intersection) / (bg1.length + bg2.length);
+}
+
 async function doSpotifySearch(query) {
   try {
     setLoading(true);
-    if (!query || typeof query !== 'string') {
-      showLocalizedToast('invalidSearchQuery', 'error');
+    if (!query) {
+      showLocalizedToast("invalidSearchQuery", "error");
       return;
     }
-    
     resultsDiv.innerHTML = "";
+
+    // Check local cache to reduce repeated calls
+    const cacheKey = `spotifySearch_${query.toLowerCase()}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      buildSpotifySearchResultsUI(parsed, query);
+      return;
+    }
+
+    // If not cached, do an API request via background.js
     chrome.runtime.sendMessage({ action: "SEARCH_SPOTIFY_TRACKS", query }, (resp) => {
       if (!resp || !resp.success) {
         showLocalizedToast(`error: ${resp?.error || "noResponse"}`, "error");
         return;
       }
-      const items = resp.searchData.tracks?.items || [];
-      if (!items.length) {
-        showLocalizedToast("noSongsFound", "info");
-        return;
-      }
-      let maxSim = 0;
-      items.forEach((track) => {
-        const sim = computeSimilarity(query, track.name);
-        if (sim > maxSim) maxSim = sim;
-      });
-      if (maxSim < 0.4 && videoDescriptionEl.textContent.trim() !== "") {
-        const fallbackBtn = document.createElement("button");
-        fallbackBtn.classList.add("btn", "btn-small", "btn-purple");
-        fallbackBtn.textContent = "Try with Description 🔄";
-        fallbackBtn.addEventListener("click", () => {
-          const fallbackQuery = videoDescriptionEl.textContent
-            .trim()
-            .split(" ")
-            .slice(0, 10)
-            .join(" ");
-          doSpotifySearch(fallbackQuery);
-        });
-        resultsDiv.appendChild(fallbackBtn);
-        showLocalizedToast("lowSimilarityTryWithDescription", "info");
-      }
-      showLocalizedToast("foundSongs", "success");
-      items.forEach((track) => buildTrackSearchRow(track, query));
-      updateSavedResults();
+      // Save to cache
+      localStorage.setItem(cacheKey, JSON.stringify(resp.searchData));
+      buildSpotifySearchResultsUI(resp.searchData, query);
     });
   } catch (error) {
-    await handleError(error, 'doSpotifySearch');
+    console.error(error);
+    showLocalizedToast("failedToSearchSpotify", "error");
   } finally {
     setLoading(false);
   }
 }
 
-// Add input validation
-function validateYouTubeUrl(url) {
-  const pattern = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/;
-  return pattern.test(url);
-}
+// Build the UI for the results of a Spotify search
+function buildSpotifySearchResultsUI(searchData, originalQuery) {
+  const items = searchData.tracks?.items || [];
+  if (!items.length) {
+    showLocalizedToast("noSongsFound", "info");
+    return;
+  }
 
-function validateSpotifyUrl(url) {
-  const pattern = /^(https?:\/\/)?(open\.)?spotify\.com\/(track|album|playlist)\/[a-zA-Z0-9]+$/;
-  return pattern.test(url);
-}
-function buildTrackSearchRow(track, query) {
-  try {
-    if (!track || !track.name) {
-      throw new Error('Invalid track data');
-    }
-    
-    const simScore = computeSimilarity(query, track.name);
+  items.forEach((track) => {
     const row = document.createElement("div");
     row.classList.add("result-item");
+
+    const simScore = computeDiceCoefficient(originalQuery, track.name);
+
     row.innerHTML = `
       <img 
-        src="${track.album.images[0]?.url || "placeholder.png"}" 
-        alt="${track.name}"
+        src="${track.album.images[0]?.url || ""}" 
+        alt="${track.name}" 
         class="result-thumbnail"
       />
       <div class="result-content">
@@ -384,110 +274,42 @@ function buildTrackSearchRow(track, query) {
         <div class="result-subtitle">${track.artists[0]?.name || "Unknown"} • ${track.album.name}</div>
       </div>
       <div class="result-actions">
-        <span class="result-badge">${(simScore * 100).toFixed(0)}%</span>
-        <button class="action-button get-details" title="Get track details">
-          <span>Details</span>
-        </button>
+        <span class="result-badge">${(simScore * 100).toFixed(1)}%</span>
+        <button class="action-button get-details">Details</button>
       </div>
     `;
+
+    // Add "Details" button handler
     row.querySelector(".get-details").addEventListener("click", () => {
       getSpotifyTrackDetails(track.id);
     });
+
     resultsDiv.appendChild(row);
-    updateSavedResults();
-  } catch (error) {
-    console.error(error);
-    showLocalizedToast("errorBuildingResultRow", "error");
+  });
+
+  // If best similarity is below a threshold, show a fallback button
+  const bestSim = Math.max(...items.map(t => computeDiceCoefficient(originalQuery, t.name)));
+  if (bestSim < 0.3 && videoDescriptionEl.textContent.trim()) {
+    const fallbackBtn = document.createElement("button");
+    fallbackBtn.classList.add("btn", "btn-small", "btn-purple");
+    fallbackBtn.textContent = "Try with Description 🔄";
+    fallbackBtn.addEventListener("click", () => {
+      const fallbackQuery = videoDescriptionEl.textContent
+        .trim()
+        .split(" ")
+        .slice(0, 10)
+        .join(" ");
+      doSpotifySearch(fallbackQuery);
+    });
+    resultsDiv.prepend(fallbackBtn);
+    showLocalizedToast("lowSimilarityTryWithDescription", "info");
   }
+  updateSavedResults();
 }
 
-// Add after buildTrackSearchRow function
-function addAudioPreviewFeature() {
-  let currentAudio = null;
-  
-  function createAudioPlayer(previewUrl, trackName) {
-    if (currentAudio) {
-      currentAudio.pause();
-      currentAudio = null;
-    }
-    
-    if (!previewUrl) return null;
-    
-    const audio = new Audio(previewUrl);
-    const playerContainer = document.createElement('div');
-    playerContainer.className = 'audio-preview';
-    
-    const playBtn = document.createElement('button');
-    playBtn.className = 'action-button';
-    playBtn.innerHTML = '▶️';
-    
-    const progress = document.createElement('div');
-    progress.className = 'progress-bar';
-    
-    playerContainer.appendChild(playBtn);
-    playerContainer.appendChild(progress);
-    
-    playBtn.addEventListener('click', () => {
-      if (audio.paused) {
-        audio.play();
-        playBtn.innerHTML = '⏸️';
-      } else {
-        audio.pause();
-        playBtn.innerHTML = '▶️';
-      }
-    });
-    
-    audio.addEventListener('timeupdate', () => {
-      const percent = (audio.currentTime / audio.duration) * 100;
-      progress.style.width = `${percent}%`;
-    });
-    
-    audio.addEventListener('ended', () => {
-      playBtn.innerHTML = '▶️';
-      progress.style.width = '0%';
-    });
-    
-    currentAudio = audio;
-    return playerContainer;
-  }
-  
-  // Modify buildTrackSearchRow to include audio preview
-  const originalBuildTrackSearchRow = buildTrackSearchRow;
-  buildTrackSearchRow = function(track, query) {
-    const row = originalBuildTrackSearchRow(track, query);
-    if (track.preview_url) {
-      const player = createAudioPlayer(track.preview_url, track.name);
-      if (player) {
-        row.querySelector('.result-actions').appendChild(player);
-      }
-    }
-    return row;
-  };
-}
-
-fetchSpotifyLinksBtn.addEventListener("click", () => {
-  try {
-    const raw = manualSpotifyInput.value.trim();
-    if (!raw) {
-      showLocalizedToast("pleaseEnterSpotifyLink", "error");
-      return;
-    }
-    resultsDiv.innerHTML = "";
-    const lines = raw.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-    lines.forEach((line) => {
-      if (line.includes("spotify.com/track/")) {
-        const trackId = parseSpotifyId(line, "track");
-        if (trackId) getSpotifyTrackDetails(trackId);
-        else showLocalizedToast(`invalidLink: ${line}`, "error");
-      } else {
-        showLocalizedToast(`unknownLink: ${line}`, "error");
-      }
-    });
-  } catch (error) {
-    console.error(error);
-    showLocalizedToast("errorProcessingSpotifyLink", "error");
-  }
-});
+////////////////////////////////////////////////////////////////////////
+// 4. Fetching and displaying Spotify track details
+////////////////////////////////////////////////////////////////////////
 
 function parseSpotifyId(link, type) {
   try {
@@ -515,204 +337,297 @@ function getSpotifyTrackDetails(trackId) {
   }
 }
 
+// Basic example of building track details UI
 function buildTrackDetailsCard(trackData, audioFeatures) {
-  try {
-    const container = document.createElement("div");
-    container.classList.add("result-item");
-    container.innerHTML = `
-      <img 
-        src="${trackData.album?.images[0]?.url || "placeholder.png"}" 
-        alt="${trackData.name}"
-        class="result-thumbnail"
-      />
-      <div class="result-content">
-        <div class="result-title">${trackData.name}</div>
-        <div class="result-subtitle">
-          ${trackData.artists[0]?.name || "Unknown"} • ${trackData.album?.name}
-        </div>
-        <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">
-          ISRC: ${trackData.external_ids?.isrc || "N/A"} • 
-          UPC: ${trackData.album?.external_ids?.upc || "N/A"}
-        </div>
-      </div>
-      <div class="result-actions">
-        <button class="action-button" data-value="${trackData.external_ids?.isrc}" title="Copy ISRC">
-          📋 ISRC
-        </button>
-        <button class="action-button" data-value="${trackData.album?.external_ids?.upc}" title="Copy UPC">
-          📋 UPC
-        </button>
-      </div>
-    `;
-    container.querySelectorAll(".action-button").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const val = btn.getAttribute("data-value");
-        if (val && val !== "N/A") {
-          navigator.clipboard.writeText(val)
-            .then(() => showLocalizedToast(`copied: ${val}`, "success"))
-            .catch(() => showLocalizedToast("copyFailed", "error"));
-        } else {
-          showLocalizedToast("nothingToCopy", "warning");
-        }
-      });
-    });
-    resultsDiv.appendChild(container);
-    updateSavedResults();
-  } catch (error) {
-    console.error(error);
-    showLocalizedToast("errorBuildingDetailsCard", "error");
-  }
-}
+  const container = document.createElement("div");
+  container.classList.add("result-item");
 
-// Add after buildTrackDetailsCard function
-function addSimilarTracksFeature() {
-  async function getSimilarTracks(trackId) {
-    return new Promise((resolve) => {
-      chrome.runtime.sendMessage(
-        { 
-          action: "GET_SIMILAR_TRACKS", 
-          trackId 
-        }, 
-        (response) => resolve(response)
-      );
-    });
-  }
-  
-  // Modify buildTrackDetailsCard to include similar tracks button
-  const originalBuildTrackDetailsCard = buildTrackDetailsCard;
-  buildTrackDetailsCard = function(trackData, audioFeatures) {
-    const card = originalBuildTrackDetailsCard(trackData, audioFeatures);
-    
-    const similarBtn = document.createElement('button');
-    similarBtn.className = 'action-button';
-    similarBtn.innerHTML = '🎵 Similar';
-    
-    similarBtn.addEventListener('click', async () => {
-      const response = await getSimilarTracks(trackData.id);
-      if (response?.success) {
-        const similarTracksContainer = document.createElement('div');
-        similarTracksContainer.className = 'similar-tracks';
-        response.tracks.forEach(track => {
-          buildTrackSearchRow(track, '');
-        });
+  container.innerHTML = `
+    <img 
+      src="${trackData.album?.images[0]?.url || "placeholder.png"}" 
+      alt="${trackData.name}"
+      class="result-thumbnail"
+    />
+    <div class="result-content">
+      <div class="result-title">${trackData.name}</div>
+      <div class="result-subtitle">
+        ${trackData.artists[0]?.name || "Unknown"} • ${trackData.album?.name}
+      </div>
+      <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">
+        ISRC: ${trackData.external_ids?.isrc || "N/A"} • 
+        UPC: ${trackData.album?.external_ids?.upc || "N/A"}
+      </div>
+    </div>
+    <div class="result-actions">
+      <button class="action-button copy-isrc" data-value="${trackData.external_ids?.isrc}">📋 ISRC</button>
+      <button class="action-button copy-upc" data-value="${trackData.album?.external_ids?.upc}">📋 UPC</button>
+    </div>
+  `;
+
+  // Copy ISRC/UPC to clipboard
+  container.querySelectorAll(".action-button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const val = btn.getAttribute("data-value");
+      if (val && val !== "N/A") {
+        navigator.clipboard.writeText(val)
+          .then(() => showLocalizedToast(`copied: ${val}`, "success"))
+          .catch(() => showLocalizedToast("copyFailed", "error"));
+      } else {
+        showLocalizedToast("nothingToCopy", "warning");
       }
     });
-    
-    card.querySelector('.result-actions').appendChild(similarBtn);
-    return card;
-  };
-}
-
-// Add after getSpotifyTrackDetails function
-async function addLyricsFeature() {
-  const searchLyrics = async (artist, title) => {
-    try {
-      const response = await fetch(`https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(title)}`);
-      const data = await response.json();
-      return data.lyrics;
-    } catch (error) {
-      console.error('Lyrics fetch error:', error);
-      return null;
-    }
-  };
-  
-  const showLyrics = (lyrics, title) => {
-    const modal = document.createElement('div');
-    modal.className = 'lyrics-modal';
-    modal.innerHTML = `
-      <div class="lyrics-content">
-        <h3>${title}</h3>
-        <pre>${lyrics || 'Lyrics not found'}</pre>
-        <button class="btn btn-blue">Close</button>
-      </div>
-    `;
-    
-    modal.querySelector('button').addEventListener('click', () => {
-      document.body.removeChild(modal);
-    });
-    
-    document.body.appendChild(modal);
-  };
-  
-  // Modify buildTrackDetailsCard to include lyrics button
-  const originalBuildTrackDetailsCard = buildTrackDetailsCard;
-  buildTrackDetailsCard = function(trackData, audioFeatures) {
-    const card = originalBuildTrackDetailsCard(trackData, audioFeatures);
-    
-    const lyricsBtn = document.createElement('button');
-    lyricsBtn.className = 'action-button';
-    lyricsBtn.innerHTML = '📝 Lyrics';
-    lyricsBtn.addEventListener('click', async () => {
-      const lyrics = await searchLyrics(trackData.artists[0].name, trackData.name);
-      showLyrics(lyrics, trackData.name);
-    });
-    
-    card.querySelector('.result-actions').appendChild(lyricsBtn);
-    return card;
-  };
-}
-
-// Add after buildTrackDetailsCard function
-function addExportFeature() {
-  const exportBtn = document.createElement('button');
-  exportBtn.className = 'btn btn-blue';
-  exportBtn.innerHTML = '📥 Export Results';
-  exportBtn.style.marginLeft = '8px';
-  
-  exportBtn.addEventListener('click', () => {
-    const results = Array.from(resultsDiv.querySelectorAll('.result-item')).map(item => ({
-      title: item.querySelector('.result-title').textContent,
-      artist: item.querySelector('.result-subtitle').textContent.split('•')[0].trim(),
-      isrc: item.querySelector('[data-value]')?.getAttribute('data-value') || 'N/A',
-      upc: item.querySelectorAll('[data-value]')[1]?.getAttribute('data-value') || 'N/A'
-    }));
-    
-    const csv = [
-      ['Title', 'Artist', 'ISRC', 'UPC'],
-      ...results.map(r => [r.title, r.artist, r.isrc, r.upc])
-    ].map(row => row.join(',')).join('\n');
-    
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'isrc_results.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   });
-  
-  document.querySelector('#clearResultsBtn').parentNode.appendChild(exportBtn);
+
+  // Optionally add a "Similar Tracks" button or a "Lyrics" button
+  const lyricsBtn = document.createElement('button');
+  lyricsBtn.className = 'action-button';
+  lyricsBtn.textContent = '📝 Lyrics';
+  lyricsBtn.addEventListener('click', async () => {
+    const artist = trackData.artists[0]?.name || '';
+    const title = trackData.name || '';
+    const lyrics = await fetchLyrics(artist, title);
+    showLyricsModal(lyrics, trackData.name);
+  });
+  container.querySelector('.result-actions').appendChild(lyricsBtn);
+
+  // If there's a preview URL, show an audio preview
+  if (trackData.preview_url) {
+    const audioPlayer = createAudioPlayer(trackData.preview_url, trackData.name);
+    container.querySelector('.result-actions').appendChild(audioPlayer);
+  }
+
+  resultsDiv.appendChild(container);
+  updateSavedResults();
 }
 
-clearResultsBtn.addEventListener("click", () => {
-  try {
-    resultsDiv.innerHTML = "";
-    updateSavedResults();
-    showLocalizedToast("resultsCleared", "success");
-  } catch (error) {
-    console.error(error);
-    showLocalizedToast("errorClearingResults", "error");
+// Example multi-source lyric search
+async function fetchLyrics(artist, title) {
+  let lyrics = await fetchLyricsFromOvh(artist, title);
+  if (!lyrics) {
+    // fallback to a second source here (e.g., Genius or AudD)
+    // lyrics = await fetchLyricsFromGenius(artist, title);
   }
-});
+  return lyrics || "Lyrics not found.";
+}
 
-openOptionsBtn.addEventListener("click", () => {
+async function fetchLyricsFromOvh(artist, title) {
   try {
-    if (chrome.runtime.openOptionsPage) chrome.runtime.openOptionsPage();
-    else window.open(chrome.runtime.getURL("options.html"));
-  } catch (error) {
-    console.error(error);
-    showLocalizedToast("errorOpeningOptions", "error");
+    const url = `https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(title)}`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+    return data.lyrics || "";
+  } catch {
+    return "";
   }
-});
+}
+
+// Simple lyrics modal
+function showLyricsModal(lyrics, trackName) {
+  const modal = document.createElement('div');
+  modal.className = 'lyrics-modal';
+  modal.innerHTML = `
+    <div class="lyrics-content">
+      <h3>${trackName}</h3>
+      <pre style="white-space: pre-wrap; font-size: 13px;">${lyrics}</pre>
+      <button class="btn btn-blue">Close</button>
+    </div>
+  `;
+  modal.querySelector('button').addEventListener('click', () => {
+    document.body.removeChild(modal);
+  });
+  document.body.appendChild(modal);
+}
+
+////////////////////////////////////////////////////////////////////////
+// 5. Audio Preview
+////////////////////////////////////////////////////////////////////////
+
+function createAudioPlayer(previewUrl, title) {
+  const container = document.createElement('div');
+  container.classList.add('audio-preview');
+
+  const audio = new Audio(previewUrl);
+  const playBtn = document.createElement('button');
+  playBtn.className = 'action-button';
+  playBtn.textContent = '▶️';
+
+  const progress = document.createElement('div');
+  progress.className = 'progress-bar';
+  progress.style.width = '0%';
+
+  playBtn.addEventListener('click', () => {
+    if (activeAudio && activeAudio !== audio) {
+      activeAudio.pause();
+      // Optionally reset the other progress bar
+    }
+    if (audio.paused) {
+      audio.play();
+      activeAudio = audio;
+      playBtn.textContent = '⏸️';
+    } else {
+      audio.pause();
+      playBtn.textContent = '▶️';
+    }
+  });
+
+  audio.addEventListener('timeupdate', () => {
+    const pct = (audio.currentTime / audio.duration) * 100;
+    progress.style.width = `${pct}%`;
+  });
+
+  audio.addEventListener('ended', () => {
+    playBtn.textContent = '▶️';
+    progress.style.width = '0%';
+  });
+
+  container.appendChild(playBtn);
+  container.appendChild(progress);
+  return container;
+}
+
+////////////////////////////////////////////////////////////////////////
+// 6. Batch Processing Feature
+////////////////////////////////////////////////////////////////////////
+
+function addBatchProcessingFeature() {
+  const batchUploadBtn = document.createElement('button');
+  batchUploadBtn.className = 'btn btn-purple';
+  batchUploadBtn.innerHTML = '📄 Batch Process';
+
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = '.txt,.csv';
+  fileInput.style.display = 'none';
+
+  batchUploadBtn.addEventListener('click', () => fileInput.click());
+
+  fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const content = ev.target.result;
+      const links = content
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.includes('youtube.com/watch') || line.includes('spotify.com/track'));
+
+      showToast(`Processing ${links.length} links...`, 'info');
+
+      for (const link of links) {
+        if (link.includes('youtube.com')) {
+          await fetchYouTubeInfo(link);
+        } else if (link.includes('spotify.com')) {
+          const trackId = parseSpotifyId(link, 'track');
+          if (trackId) await getSpotifyTrackDetails(trackId);
+        }
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  // Insert the new button above your first .input-group in that card
+  const firstCard = document.querySelector('.card');
+  const firstInputGroup = firstCard.querySelector('.input-group');
+  firstCard.insertBefore(batchUploadBtn, firstInputGroup);
+}
+
+////////////////////////////////////////////////////////////////////////
+// 7. General Utils (Loading states, saving results, etc.)
+////////////////////////////////////////////////////////////////////////
+
+function setLoading(isLoading) {
+  const buttons = document.querySelectorAll('.btn, .action-button');
+  buttons.forEach(btn => {
+    if (isLoading) {
+      btn.disabled = true;
+      if (!btn.dataset.originalText) {
+        btn.dataset.originalText = btn.innerHTML;
+      }
+      btn.innerHTML = '⌛ Loading...';
+    } else {
+      btn.disabled = false;
+      if (btn.dataset.originalText) {
+        btn.innerHTML = btn.dataset.originalText;
+        delete btn.dataset.originalText;
+      }
+    }
+  });
+}
+
+function showLocalizedToast(key, type = 'info') {
+  const text = translations[currentLang][key] || key;
+  showToast(text, type);
+}
+
+// Save results to localStorage so we can restore them next time
+function updateSavedResults() {
+  try {
+    localStorage.setItem("savedResults", resultsDiv.innerHTML);
+  } catch (error) {
+    console.error("Error saving results:", error);
+  }
+}
+function loadSavedResults() {
+  try {
+    const saved = localStorage.getItem("savedResults");
+    if (saved) {
+      resultsDiv.innerHTML = saved;
+    }
+  } catch (error) {
+    console.error("Error loading saved results:", error);
+  }
+}
+
+async function getCurrentTab() {
+  try {
+    if (!chrome.tabs) throw new Error('Chrome tabs API not available');
+    const queryOptions = { active: true, currentWindow: true };
+    const tabs = await new Promise((resolve, reject) => {
+      chrome.tabs.query(queryOptions, (ts) => {
+        if (chrome.runtime.lastError) return reject(chrome.runtime.lastError);
+        resolve(ts);
+      });
+    });
+    return tabs[0];
+  } catch (error) {
+    console.error("getCurrentTab error:", error);
+    showLocalizedToast("failedToGetCurrentTab", "error");
+    return null;
+  }
+}
+
+async function autoFetchFromCurrentTab() {
+  try {
+    const tab = await getCurrentTab();
+    if (!tab) {
+      showLocalizedToast("couldNotAccessCurrentTab", "error");
+      return;
+    }
+    if (!tab.url?.includes("youtube.com/watch")) {
+      // Not a YT watch page, so we skip auto fetching
+      return;
+    }
+    // Set the URL in the input and fetch info
+    youtubeLinkInput.value = tab.url;
+    await fetchYouTubeInfo(tab.url);
+  } catch (error) {
+    console.error("Auto-fetch error:", error);
+    showLocalizedToast("failedToAutoFetchVideoInfo", "error");
+  }
+}
+
+////////////////////////////////////////////////////////////////////////
+// 8. DOMContentLoaded Initialization
+////////////////////////////////////////////////////////////////////////
 
 document.addEventListener("DOMContentLoaded", async () => {
   try {
-    // Load configuration
-    const config = await loadConfig();
-    
-    // Load saved YouTube info from localStorage if it exists
+    // Load saved results from localStorage
+    loadSavedResults();
+
+    // Load saved YouTube info from localStorage
     const savedTitle = localStorage.getItem("youtubeTitle");
     const savedDescription = localStorage.getItem("youtubeDescription");
     if (savedTitle || savedDescription) {
@@ -720,15 +635,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       videoTitleEl.textContent = savedTitle || "(No title)";
       videoDescriptionEl.textContent = savedDescription || "(No description)";
     }
+
+    // Possibly attempt to auto-fetch from current tab
     await autoFetchFromCurrentTab();
 
     // Load saved language preference
-    chrome.storage.local.get('language', function(data) {
+    chrome.storage.local.get('language', (data) => {
       const savedLang = data.language || 'en';
       updateLanguage(savedLang);
     });
-
-    // Listen for language changes from options page
+    // If the user changes language in Options, listen for changes:
     chrome.storage.onChanged.addListener((changes) => {
       if (changes.language) {
         updateLanguage(changes.language.newValue);
@@ -737,36 +653,66 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Initialize language selector
     const languageSelect = document.getElementById('languageSelect');
-    
-    // Load saved language preference
-    chrome.storage.local.get('language', function(data) {
-      const savedLang = data.language || 'en';
-      languageSelect.value = savedLang;
-      updateLanguage(savedLang);
+    languageSelect.addEventListener('change', function () {
+      updateLanguage(this.value);
     });
 
-    // Handle language changes
-    languageSelect.addEventListener('change', function() {
-      const selectedLang = this.value;
-      updateLanguage(selectedLang);
+    // Theme is already set at the top
+
+    // Event listeners
+    fetchYouTubeBtn.addEventListener("click", () => fetchYouTubeInfo(youtubeLinkInput.value.trim()));
+    searchSpotifyBtn.addEventListener("click", () => doSpotifySearch(spotifySearchInput.value.trim()));
+    fetchSpotifyLinksBtn.addEventListener("click", () => {
+      try {
+        const raw = manualSpotifyInput.value.trim();
+        if (!raw) {
+          showLocalizedToast("pleaseEnterSpotifyLink", "error");
+          return;
+        }
+        resultsDiv.innerHTML = "";
+        const lines = raw.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+        lines.forEach((line) => {
+          if (line.includes("spotify.com/track/")) {
+            const trackId = parseSpotifyId(line, "track");
+            if (trackId) getSpotifyTrackDetails(trackId);
+            else showLocalizedToast(`invalidLink: ${line}`, "error");
+          } else {
+            showLocalizedToast(`unknownLink: ${line}`, "error");
+          }
+        });
+      } catch (err) {
+        console.error(err);
+        showLocalizedToast("errorProcessingSpotifyLink", "error");
+      }
     });
 
-    // Add batch processing feature
+    clearResultsBtn.addEventListener("click", () => {
+      resultsDiv.innerHTML = "";
+      updateSavedResults();
+      showLocalizedToast("resultsCleared", "success");
+    });
+
+    openOptionsBtn.addEventListener("click", () => {
+      try {
+        if (chrome.runtime.openOptionsPage) chrome.runtime.openOptionsPage();
+        else window.open(chrome.runtime.getURL("options.html"));
+      } catch (error) {
+        console.error(error);
+        showLocalizedToast("errorOpeningOptions", "error");
+      }
+    });
+
+    // Add advanced features
     addBatchProcessingFeature();
-    addExportFeature();
-    addAudioPreviewFeature();
-    addLyricsFeature();
-    addSimilarTracksFeature();
+    addExportFeature(); // see function below for exporting CSV, or place it inline
 
-    const searchHistory = new SearchHistory();
-    const compareBtn = compareTracksFeature(resultsDiv);
-    // document.querySelector('.card').appendChild(compareBtn);
-    
-    // Show user guide on first visit
-    if (!localStorage.getItem('guideSeen')) {
-      showUserGuide(currentLang);
-      localStorage.setItem('guideSeen', 'true');
-    }
+    // If you have a user guide or a compare feature, enable them:
+    // const searchHistory = new SearchHistory();
+    // const compareBtn = compareTracksFeature(resultsDiv);
+    // if (!localStorage.getItem('guideSeen')) {
+    //   showUserGuide(currentLang);
+    //   localStorage.setItem('guideSeen', 'true');
+    // }
 
   } catch (error) {
     console.error("DOMContentLoaded error:", error);
@@ -774,7 +720,60 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 });
 
-function showLocalizedToast(key, type = 'info') {
-  const text = translations[currentLang][key] || key;
-  showToast(text, type);
+////////////////////////////////////////////////////////////////////////
+// 9. Export CSV Feature (optional)
+////////////////////////////////////////////////////////////////////////
+
+function addExportFeature() {
+  const exportBtn = document.createElement('button');
+  exportBtn.className = 'btn btn-blue';
+  exportBtn.innerHTML = '📥 Export Results';
+  exportBtn.style.marginLeft = '8px';
+
+  exportBtn.addEventListener('click', () => {
+    const allItems = Array.from(resultsDiv.querySelectorAll('.result-item'));
+    if (!allItems.length) {
+      showLocalizedToast("noResultsToExport", "warning");
+      return;
+    }
+
+    // Build CSV from each .result-item
+    const results = allItems.map(item => {
+      const titleEl = item.querySelector('.result-title');
+      const subtitleEl = item.querySelector('.result-subtitle');
+      const isrcBtn = item.querySelector('.copy-isrc');
+      const upcBtn = item.querySelector('.copy-upc');
+      return {
+        title: titleEl ? titleEl.textContent : '',
+        artist: subtitleEl ? subtitleEl.textContent.split('•')[0].trim() : '',
+        isrc: isrcBtn ? (isrcBtn.getAttribute('data-value') || '') : '',
+        upc: upcBtn ? (upcBtn.getAttribute('data-value') || '') : ''
+      };
+    });
+
+    const header = ['Title', 'Artist', 'ISRC', 'UPC'];
+    const csvRows = [header.join(',')];
+    for (const r of results) {
+      csvRows.push([
+        r.title.replace(/,/g, ';'),
+        r.artist.replace(/,/g, ';'),
+        r.isrc,
+        r.upc
+      ].join(','));
+    }
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'exported_results.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  // Append the Export button next to the Clear Results button
+  const parent = document.getElementById('clearResultsBtn').parentNode;
+  parent.appendChild(exportBtn);
 }
