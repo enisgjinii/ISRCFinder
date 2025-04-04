@@ -1,72 +1,121 @@
-# 🎵 ISRCFinder - ISRC Code Extractor
+# 🎵 ISRCFinder - YouTube to Spotify Metadata Extractor
 
-ISRCFinder is a browser extension designed to help users find **International Standard Recording Codes (ISRCs)** from various online music platforms. The ISRC is a unique identifier for music recordings, useful for musicians, producers, and rights holders.
+A powerful browser extension that bridges YouTube and Spotify to extract ISRC/UPC codes and music metadata. Perfect for music professionals, rights holders, and metadata enthusiasts.
 
-## 🚀 Features
-- Extract **ISRC codes** from supported music streaming services.
-- Easy-to-use **popup interface**.
-- **Background script** processes web pages automatically.
-- **Customizable settings** to enhance user experience.
-- Works on **Chrome** and **Firefox**.
+## ✨ Key Features
 
-## 🛠 Installation
+- 🔍 **Smart Detection**: Automatically detects YouTube URLs from current tab or clipboard
+- 🎯 **Accurate Matching**: Advanced similarity algorithm to find the right track on Spotify
+- 🔄 **Real-time Sync**: Instant metadata retrieval and automatic search
+- 🎨 **Modern UI**: Clean, responsive interface with dark/light mode support
+- 🌍 **Multi-language**: Supports English, Albanian, and German
+- 💾 **Auto-saving**: All results persist locally
 
-### 🔹 Install Manually (Developer Mode)
-1. **Download** the repository:
-   ```sh
-   git clone https://github.com/enisgjinii/ISRCFinder.git
+## 🚀 Quick Start
+
+1. **Install Dependencies**
+   ```bash
+   git clone https://github.com/your-username/ISRCFinder.git
    cd ISRCFinder
    ```
-2. Open **Google Chrome** and go to:
-   ```
-   chrome://extensions/
-   ```
-3. **Enable Developer Mode** (toggle switch in the top-right).
-4. Click **"Load unpacked"** and select the `ISRCFinder` folder.
-5. The extension is now installed and ready to use!
 
-## 🎮 How to Use
-1. Navigate to a music streaming platform (e.g., Spotify, YouTube, or others).
-2. Click the **ISRCFinder icon** in the browser toolbar.
-3. The popup will display the extracted **ISRC codes**.
-4. Copy and use the codes for your records or music rights management.
+2. **Configure API Keys**
+   - Get Spotify API credentials from [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+   - Get YouTube Data API key from [Google Cloud Console](https://console.cloud.google.com)
+   - Add them in extension settings
 
-## 📁 Project Structure
+3. **Load Extension**
+   - Open Chrome Extensions (chrome://extensions/)
+   - Enable Developer Mode
+   - Click "Load unpacked"
+   - Select the ISRCFinder folder
+
+## 🎮 Usage
+
+1. **YouTube Integration**
+   - Click extension icon on any YouTube video
+   - Or paste YouTube URL manually
+   - Extension auto-extracts video info
+
+2. **Spotify Search**
+   - Auto-searches Spotify using cleaned video title
+   - Manual search option available
+   - Batch process multiple Spotify links
+
+3. **Metadata Extraction**
+   - Click "Details" to view full metadata
+   - One-click ISRC/UPC copying
+   - Preview audio samples when available
+
+## ⚙️ Advanced Features
+
+- **Keyboard Shortcuts**
+  - `Ctrl/⌘ + Enter`: Fetch YouTube info
+  - `Ctrl/⌘ + S`: Search Spotify
+  - `Ctrl/⌘ + L`: Clear results
+
+- **Customization**
+  - Accent color picker
+  - Font size adjustment
+  - Auto-fetch settings
+  - Export format options
+
+- **Data Management**
+  - Local result caching
+  - Backup/Restore settings
+  - Multiple export formats
+
+## 🛠️ Technical Details
+
+```javascript
+Extension Structure:
+├── manifest.json        # Extension configuration
+├── popup/              # Main extension UI
+├── background/         # Background processes
+├── utils/             # Shared utilities
+└── _locales/          # Language files
 ```
-ISRCFinder/
-│── background.js     # Background script for processing ISRC codes
-│── manifest.json     # Browser extension manifest file
-│── popup.html        # HTML structure for the extension popup
-│── popup.js          # JavaScript logic for the popup UI
-│── options.html      # Settings page for the extension
-│── options.js        # JavaScript logic for settings
-│── style.css         # CSS styles for the popup and settings
-│── icons/            # Extension icons
-│── utils/            # Utility scripts (if any)
-```
 
-## 🔧 Technologies Used
-- **JavaScript** – For core functionality.
-- **HTML & CSS** – For the UI.
-- **Chrome Extension APIs** – For accessing and modifying web pages.
+## 🔒 Privacy & Security
 
-## 📌 Future Improvements
-- Support for more streaming platforms.
-- Option to export ISRC codes to CSV.
-- Improved UI/UX for better usability.
+- No data sent to external servers
+- All API calls made directly to YouTube/Spotify
+- Local storage only for user preferences
+- No tracking or analytics
+
+## 🐛 Troubleshooting
+
+Common issues and solutions:
+
+1. **API Key Issues**
+   - Verify Spotify API credentials
+   - Check YouTube API quota
+   - Ensure proper format of keys
+
+2. **No Results**
+   - Check internet connection
+   - Verify video availability
+   - Try manual search
 
 ## 🤝 Contributing
-Contributions are welcome! Feel free to **fork** the repo and submit a **pull request**.
 
-1. Fork the project.
-2. Create a feature branch (`git checkout -b feature-name`).
-3. Commit your changes (`git commit -m "Added new feature"`).
-4. Push to your branch (`git push origin feature-name`).
-5. Open a pull request.
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit changes (`git commit -m 'Add AmazingFeature'`)
+4. Push to branch (`git push origin feature/AmazingFeature`)
+5. Open Pull Request
 
-## 📜 License
-This project is licensed under the **MIT License** – see the [LICENSE](LICENSE) file for details.
+## 📝 License
+
+ISRCFinder is MIT licensed. See [LICENSE](LICENSE) for details.
+
+## 🙏 Acknowledgments
+
+- [Spotify Web API](https://developer.spotify.com/documentation/web-api/)
+- [YouTube Data API](https://developers.google.com/youtube/v3)
+- [Inter Font](https://fonts.google.com/specimen/Inter)
+- [Boxicons](https://boxicons.com/)
 
 ---
 
-### 🎧 Happy Music Tracking! 🎶
+<p align="center">Made with ❤️ for the music industry</p>
