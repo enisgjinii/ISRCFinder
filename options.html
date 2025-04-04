@@ -4,7 +4,14 @@
 <head>
   <meta charset="utf-8">
   <title>⚙️ Extension Settings</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    }
+
     * {
       box-sizing: border-box;
       margin: 0;
@@ -12,7 +19,7 @@
     }
 
     body {
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-family: var(--font-family);
       background: #f8fafc;
       color: #1e293b;
       min-height: 100vh;
@@ -277,8 +284,7 @@
       <select id="languageSelect">
         <option value="en">🇬🇧 English</option>
         <option value="sq">🇦🇱 Shqip</option>
-        <option value="nl">🇳🇱 Nederlands</option>
-        <option value="it">🇮🇹 Italiano</option>
+        <option value="de">🇩🇪 Deutsch</option>
       </select>
     </div>
 
@@ -311,6 +317,114 @@
           <p class="small-note">Enter your YouTube Data API v3 key from Google Cloud Console</p>
           <div class="input-group">
             <input type="text" id="youtubeApiKey" placeholder="YouTube API Key">
+          </div>
+        </div>
+      </div>
+
+      <!-- New Sections -->
+      <div class="section">
+        <div class="section-header" id="autoFetchHeader">
+          <h2>🤖 Auto-Fetch Settings</h2>
+          <span class="section-toggle">⌄</span>
+        </div>
+        <div class="section-body" id="autoFetchBody">
+          <div class="toggle-group">
+            <label class="switch">
+              <input type="checkbox" id="autoFetchEnabled">
+              <span class="slider"></span>
+            </label>
+            <span>Enable automatic fetching</span>
+          </div>
+          <div class="toggle-group">
+            <label class="switch">
+              <input type="checkbox" id="clipboardScanEnabled">
+              <span class="slider"></span>
+            </label>
+            <span>Monitor clipboard for links</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header" id="appearanceHeader">
+          <h2>🎨 Appearance</h2>
+          <span class="section-toggle">⌄</span>
+        </div>
+        <div class="section-body" id="appearanceBody">
+          <div class="color-picker">
+            <label>Accent Color</label>
+            <input type="color" id="accentColor">
+          </div>
+          <div class="select-group">
+            <label>Font Size</label>
+            <select id="fontSize">
+              <option value="small">Small</option>
+              <option value="medium">Medium</option>
+              <option value="large">Large</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header" id="exportHeader">
+          <h2>📤 Export Settings</h2>
+          <span class="section-toggle">⌄</span>
+        </div>
+        <div class="section-body" id="exportBody">
+          <div class="select-group">
+            <label>Export Format</label>
+            <select id="exportFormat">
+              <option value="csv">CSV</option>
+              <option value="json">JSON</option>
+              <option value="excel">Excel</option>
+            </select>
+          </div>
+          <div class="toggle-group">
+            <label class="switch">
+              <input type="checkbox" id="autoExportEnabled">
+              <span class="slider"></span>
+            </label>
+            <span>Auto-export results</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header" id="notificationsHeader">
+          <h2>🔔 Notifications</h2>
+          <span class="section-toggle">⌄</span>
+        </div>
+        <div class="section-body" id="notificationsBody">
+          <div class="toggle-group">
+            <label class="switch">
+              <input type="checkbox" id="desktopNotifs">
+              <span class="slider"></span>
+            </label>
+            <span>Desktop notifications</span>
+          </div>
+          <div class="volume-control">
+            <label>Alert Volume</label>
+            <input type="range" id="alertVolume" min="0" max="100">
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header" id="backupHeader">
+          <h2>💾 Backup & Sync</h2>
+          <span class="section-toggle">⌄</span>
+        </div>
+        <div class="section-body" id="backupBody">
+          <button class="btn btn-outline" id="exportSettingsBtn">Export Settings</button>
+          <button class="btn btn-outline" id="importSettingsBtn">Import Settings</button>
+          <div class="backup-schedule">
+            <label>Auto-backup frequency</label>
+            <select id="backupFrequency">
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
           </div>
         </div>
       </div>

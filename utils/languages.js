@@ -72,3 +72,35 @@ export const languages = {
     connectionFailed: "Connessione fallita"
   }
 };
+
+export const availableLanguages = [
+  {
+    code: 'en',
+    name: 'English',
+    flag: '🇬🇧'
+  },
+  {
+    code: 'sq',
+    name: 'Shqip',
+    flag: '🇦🇱'
+  },
+  {
+    code: 'de',
+    name: 'Deutsch',
+    flag: '🇩🇪'
+  }
+];
+
+export function getLanguageName(code) {
+  const language = availableLanguages.find(lang => lang.code === code);
+  return language ? language.name : 'Unknown';
+}
+
+export function getLanguageFlag(code) {
+  const language = availableLanguages.find(lang => lang.code === code);
+  return language ? language.flag : '🌐';
+}
+
+export function isValidLanguage(code) {
+  return availableLanguages.some(lang => lang.code === code);
+}

@@ -225,7 +225,152 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     });
   });
+
+  // Add advanced settings toggle
+  const advancedSettingsToggle = document.createElement("button");
+  advancedSettingsToggle.className = "btn btn-outline";
+  advancedSettingsToggle.textContent = languages[currentLang].advancedSettings;
+  advancedSettingsToggle.addEventListener("click", () => {
+    showModal(
+      languages[currentLang].advancedSettings,
+      "Advanced settings are under development.",
+      "info"
+    );
+  });
+  document.querySelector(".actions").appendChild(advancedSettingsToggle);
+
+  // Initialize new features
+  initializeAutoFetchSettings();
+  initializeAppearanceSettings();
+  initializeExportSettings();
+  initializeNotificationSettings();
+  initializeBackupSettings();
 });
+
+// 1. Auto-Fetch Settings
+function initializeAutoFetchSettings() {
+  const autoFetchEnabled = document.getElementById('autoFetchEnabled');
+  const clipboardScanEnabled = document.getElementById('clipboardScanEnabled');
+
+  chrome.storage.local.get(['autoFetchEnabled', 'clipboardScanEnabled'], (data) => {
+    autoFetchEnabled.checked = data.autoFetchEnabled ?? false;
+    clipboardScanEnabled.checked = data.clipboardScanEnabled ?? false;
+  });
+
+  autoFetchEnabled.addEventListener('change', (e) => {
+    chrome.storage.local.set({ autoFetchEnabled: e.target.checked });
+    showToast('Auto-fetch settings saved', 'success');
+  });
+}
+
+// 2. Appearance Settings
+function initializeAppearanceSettings() {
+  const accentColor = document.getElementById('accentColor');
+  const fontSize = document.getElementById('fontSize');
+
+  chrome.storage.local.get(['accentColor', 'fontSize'], (data) => {
+    accentColor.value = data.accentColor || '#6366f1';
+    fontSize.value = data.fontSize || 'medium';
+    applyTheme(data.accentColor, data.fontSize);
+  });
+
+  accentColor.addEventListener('change', (e) => {
+    chrome.storage.local.set({ accentColor: e.target.value });
+    applyTheme(e.target.value);
+  });
+}
+
+// 3. Export Settings
+function initializeExportSettings() {
+  const exportFormat = document.getElementById('exportFormat');
+  const autoExportEnabled = document.getElementById('autoExportEnabled');
+
+  exportFormat.addEventListener('change', (e) => {
+    chrome.storage.local.set({ exportFormat: e.target.value });
+  });
+}
+
+// 4. Notification Settings
+function initializeNotificationSettings() {
+  const desktopNotifs = document.getElementById('desktopNotifs');
+  const alertVolume = document.getElementById('alertVolume');
+
+  chrome.storage.local.get(['notificationsEnabled', 'alertVolume'], (data) => {
+    desktopNotifs.checked = data.notificationsEnabled ?? true;
+    alertVolume.value = data.alertVolume ?? 50;
+  });
+
+  desktopNotifs.addEventListener('change', (e) => {
+    if (e.target.checked) {
+      Notification.requestPermission();
+    }
+    chrome.storage.local.set({ notificationsEnabled: e.target.checked });
+  });
+}
+
+// 5. Backup & Sync
+function initializeBackupSettings() {
+  const exportSettingsBtn = document.getElementById('exportSettingsBtn');
+  const importSettingsBtn = document.getElementById('importSettingsBtn');
+  const backupFrequency = document.getElementById('backupFrequency');
+
+  exportSettingsBtn.addEventListener('click', async () => {
+    const settings = await exportSettings();
+    downloadJson(settings, 'isrc-finder-settings.json');
+  });
+
+  importSettingsBtn.addEventListener('click', () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (e) => importSettings(e.target.files[0]);
+    input.click();
+  });
+}
+
+// Utility Functions
+async function exportSettings() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(null, (data) => {
+      resolve(data);
+    });
+  });
+}
+
+async function importSettings(file) {
+  try {
+    const text = await file.text();
+    const settings = JSON.parse(text);
+    await new Promise((resolve) => {
+      chrome.storage.local.set(settings, resolve);
+    });
+    showToast('Settings imported successfully', 'success');
+    location.reload();
+  } catch (error) {
+    showToast('Error importing settings', 'error');
+  }
+}
+
+function downloadJson(data, filename) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function applyTheme(accentColor, fontSize = 'medium') {
+  document.documentElement.style.setProperty('--primary', accentColor);
+  document.documentElement.style.fontSize = {
+    small: '14px',
+    medium: '16px',
+    large: '18px'
+  }[fontSize];
+}
 
 function showLocalizedToast(key, type = 'info') {
   const text = languages[currentLang][key] || key;

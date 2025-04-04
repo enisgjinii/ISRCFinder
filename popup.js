@@ -1,11 +1,6 @@
 // popup.js
 import { translations } from './utils/translations.js';
 import { showToast } from './utils/toast.js';
-// If you have specialized classes or utilities, import them here:
-// import { SearchHistory } from './utils/searchHistory.js';
-// import { compareTracksFeature } from './utils/trackCompare.js';
-// import { Statistics } from './utils/statistics.js';
-// import { showUserGuide } from './utils/guide.js';
 
 ////////////////////////////////////////////////////////////////////////
 // Global selectors & variables
@@ -72,7 +67,6 @@ function updateLanguage(lang) {
   // Example: update placeholders/text
   youtubeLinkInput.placeholder = texts.youtubeUrl || "🔗 YouTube URL";
   fetchYouTubeBtn.textContent = texts.getInfo || "✨ Get Info";
-  // If you have multiple info-title elements, you'll need to carefully select them
   document.querySelectorAll('#youtubeInfo .info-title')[0].textContent = texts.videoTitle || "🎬 Title";
   document.querySelectorAll('#youtubeInfo .info-title')[1].textContent = texts.videoDescription || "📝 Description";
   spotifySearchInput.placeholder = texts.songSearch || "🎵 Song title to search";
@@ -82,13 +76,11 @@ function updateLanguage(lang) {
   document.querySelector('.card-title').textContent = texts.results || "📑 Results";
   openOptionsBtn.title = texts.settings || "Settings";
 
-  // Also set the language selector dropdown
   const languageSelect = document.getElementById('languageSelect');
   if (languageSelect) {
     languageSelect.value = lang;
   }
 
-  // Save language preference
   chrome.storage.local.set({ language: lang });
 }
 
@@ -96,21 +88,22 @@ function updateLanguage(lang) {
 // 2. Handling YouTube info
 ////////////////////////////////////////////////////////////////////////
 
-// We’ll use a more advanced string cleaning for the video title
-function cleanYouTubeTitle(title = "") {
-  return title
-    .replace(/\(.*?\)/g, "")   // remove parentheses
-    .replace(/\[.*?\]/g, "")   // remove brackets
-    .replace(/\b\d{4}\b/g, "") // remove standalone 4-digit years
-    .trim();
-}
-
-// Extract video ID from youtube.com URLs
+// Enhanced URL detection with multiple formats support
 function parseYouTubeId(url) {
   try {
-    const u = new URL(url);
-    return u.searchParams.get("v");
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu.be\/)([^&\n?#]+)/,
+      /youtube.com\/shorts\/([^&\n?#]+)/,
+      /youtube.com\/embed\/([^&\n?#]+)/
+    ];
+
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) return match[1];
+    }
+    return null;
   } catch (error) {
+    console.error('URL parse error:', error);
     return null;
   }
 }
@@ -128,7 +121,6 @@ async function fetchYouTubeInfo(url) {
       return;
     }
 
-    // Example: show a toast that we're fetching
     showLocalizedToast("fetchingVideoInfo", "info");
     fetchYouTubeBtn.disabled = true;
 
@@ -151,13 +143,11 @@ async function fetchYouTubeInfo(url) {
         videoTitleEl.textContent = snippet.title || "(No title)";
         videoDescriptionEl.textContent = snippet.description || "(No description)";
 
-        // Save to localStorage so we can restore if the user closes & reopens popup
         localStorage.setItem("youtubeTitle", snippet.title || "");
         localStorage.setItem("youtubeDescription", snippet.description || "");
 
         showLocalizedToast("youtubeInfoFetched", "success");
 
-        // Optionally auto-trigger Spotify search with a cleaned version
         const cleanedTitle = cleanYouTubeTitle(snippet.title || "");
         if (cleanedTitle) {
           setTimeout(() => doSpotifySearch(cleanedTitle), 500);
@@ -166,18 +156,24 @@ async function fetchYouTubeInfo(url) {
       });
     });
   } catch (error) {
-    console.error(error);
-    showLocalizedToast("failedToFetchYouTubeInfo", "error");
+    handleError(translations[currentLang].networkError);
   } finally {
     setLoading(false);
   }
+}
+
+function cleanYouTubeTitle(title = "") {
+  return title
+    .replace(/\(.*?\)/g, "")   // remove parentheses
+    .replace(/\[.*?\]/g, "")   // remove brackets
+    .replace(/\b\d{4}\b/g, "") // remove standalone 4-digit years
+    .trim();
 }
 
 ////////////////////////////////////////////////////////////////////////
 // 3. Searching Spotify
 ////////////////////////////////////////////////////////////////////////
 
-// Use Dice coefficient for more robust fuzzy matching
 function computeDiceCoefficient(str1, str2) {
   const s1 = str1.toLowerCase().trim();
   const s2 = str2.toLowerCase().trim();
@@ -222,7 +218,6 @@ async function doSpotifySearch(query) {
     }
     resultsDiv.innerHTML = "";
 
-    // Check local cache to reduce repeated calls
     const cacheKey = `spotifySearch_${query.toLowerCase()}`;
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
@@ -231,13 +226,11 @@ async function doSpotifySearch(query) {
       return;
     }
 
-    // If not cached, do an API request via background.js
     chrome.runtime.sendMessage({ action: "SEARCH_SPOTIFY_TRACKS", query }, (resp) => {
       if (!resp || !resp.success) {
         showLocalizedToast(`error: ${resp?.error || "noResponse"}`, "error");
         return;
       }
-      // Save to cache
       localStorage.setItem(cacheKey, JSON.stringify(resp.searchData));
       buildSpotifySearchResultsUI(resp.searchData, query);
     });
@@ -249,7 +242,6 @@ async function doSpotifySearch(query) {
   }
 }
 
-// Build the UI for the results of a Spotify search
 function buildSpotifySearchResultsUI(searchData, originalQuery) {
   const items = searchData.tracks?.items || [];
   if (!items.length) {
@@ -279,7 +271,6 @@ function buildSpotifySearchResultsUI(searchData, originalQuery) {
       </div>
     `;
 
-    // Add "Details" button handler
     row.querySelector(".get-details").addEventListener("click", () => {
       getSpotifyTrackDetails(track.id);
     });
@@ -287,7 +278,6 @@ function buildSpotifySearchResultsUI(searchData, originalQuery) {
     resultsDiv.appendChild(row);
   });
 
-  // If best similarity is below a threshold, show a fallback button
   const bestSim = Math.max(...items.map(t => computeDiceCoefficient(originalQuery, t.name)));
   if (bestSim < 0.3 && videoDescriptionEl.textContent.trim()) {
     const fallbackBtn = document.createElement("button");
@@ -337,7 +327,6 @@ function getSpotifyTrackDetails(trackId) {
   }
 }
 
-// Basic example of building track details UI
 function buildTrackDetailsCard(trackData, audioFeatures) {
   const container = document.createElement("div");
   container.classList.add("result-item");
@@ -364,7 +353,6 @@ function buildTrackDetailsCard(trackData, audioFeatures) {
     </div>
   `;
 
-  // Copy ISRC/UPC to clipboard
   container.querySelectorAll(".action-button").forEach((btn) => {
     btn.addEventListener("click", () => {
       const val = btn.getAttribute("data-value");
@@ -378,19 +366,6 @@ function buildTrackDetailsCard(trackData, audioFeatures) {
     });
   });
 
-  // Optionally add a "Similar Tracks" button or a "Lyrics" button
-  const lyricsBtn = document.createElement('button');
-  lyricsBtn.className = 'action-button';
-  lyricsBtn.textContent = '📝 Lyrics';
-  lyricsBtn.addEventListener('click', async () => {
-    const artist = trackData.artists[0]?.name || '';
-    const title = trackData.name || '';
-    const lyrics = await fetchLyrics(artist, title);
-    showLyricsModal(lyrics, trackData.name);
-  });
-  container.querySelector('.result-actions').appendChild(lyricsBtn);
-
-  // If there's a preview URL, show an audio preview
   if (trackData.preview_url) {
     const audioPlayer = createAudioPlayer(trackData.preview_url, trackData.name);
     container.querySelector('.result-actions').appendChild(audioPlayer);
@@ -398,44 +373,6 @@ function buildTrackDetailsCard(trackData, audioFeatures) {
 
   resultsDiv.appendChild(container);
   updateSavedResults();
-}
-
-// Example multi-source lyric search
-async function fetchLyrics(artist, title) {
-  let lyrics = await fetchLyricsFromOvh(artist, title);
-  if (!lyrics) {
-    // fallback to a second source here (e.g., Genius or AudD)
-    // lyrics = await fetchLyricsFromGenius(artist, title);
-  }
-  return lyrics || "Lyrics not found.";
-}
-
-async function fetchLyricsFromOvh(artist, title) {
-  try {
-    const url = `https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(title)}`;
-    const resp = await fetch(url);
-    const data = await resp.json();
-    return data.lyrics || "";
-  } catch {
-    return "";
-  }
-}
-
-// Simple lyrics modal
-function showLyricsModal(lyrics, trackName) {
-  const modal = document.createElement('div');
-  modal.className = 'lyrics-modal';
-  modal.innerHTML = `
-    <div class="lyrics-content">
-      <h3>${trackName}</h3>
-      <pre style="white-space: pre-wrap; font-size: 13px;">${lyrics}</pre>
-      <button class="btn btn-blue">Close</button>
-    </div>
-  `;
-  modal.querySelector('button').addEventListener('click', () => {
-    document.body.removeChild(modal);
-  });
-  document.body.appendChild(modal);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -458,7 +395,6 @@ function createAudioPlayer(previewUrl, title) {
   playBtn.addEventListener('click', () => {
     if (activeAudio && activeAudio !== audio) {
       activeAudio.pause();
-      // Optionally reset the other progress bar
     }
     if (audio.paused) {
       audio.play();
@@ -486,55 +422,7 @@ function createAudioPlayer(previewUrl, title) {
 }
 
 ////////////////////////////////////////////////////////////////////////
-// 6. Batch Processing Feature
-////////////////////////////////////////////////////////////////////////
-
-function addBatchProcessingFeature() {
-  const batchUploadBtn = document.createElement('button');
-  batchUploadBtn.className = 'btn btn-purple';
-  batchUploadBtn.innerHTML = '📄 Batch Process';
-
-  const fileInput = document.createElement('input');
-  fileInput.type = 'file';
-  fileInput.accept = '.txt,.csv';
-  fileInput.style.display = 'none';
-
-  batchUploadBtn.addEventListener('click', () => fileInput.click());
-
-  fileInput.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      const content = ev.target.result;
-      const links = content
-        .split('\n')
-        .map(line => line.trim())
-        .filter(line => line.includes('youtube.com/watch') || line.includes('spotify.com/track'));
-
-      showToast(`Processing ${links.length} links...`, 'info');
-
-      for (const link of links) {
-        if (link.includes('youtube.com')) {
-          await fetchYouTubeInfo(link);
-        } else if (link.includes('spotify.com')) {
-          const trackId = parseSpotifyId(link, 'track');
-          if (trackId) await getSpotifyTrackDetails(trackId);
-        }
-      }
-    };
-    reader.readAsText(file);
-  });
-
-  // Insert the new button above your first .input-group in that card
-  const firstCard = document.querySelector('.card');
-  const firstInputGroup = firstCard.querySelector('.input-group');
-  firstCard.insertBefore(batchUploadBtn, firstInputGroup);
-}
-
-////////////////////////////////////////////////////////////////////////
-// 7. General Utils (Loading states, saving results, etc.)
+// 6. General Utils (Loading states, saving results, etc.)
 ////////////////////////////////////////////////////////////////////////
 
 function setLoading(isLoading) {
@@ -561,7 +449,6 @@ function showLocalizedToast(key, type = 'info') {
   showToast(text, type);
 }
 
-// Save results to localStorage so we can restore them next time
 function updateSavedResults() {
   try {
     localStorage.setItem("savedResults", resultsDiv.innerHTML);
@@ -598,25 +485,66 @@ async function getCurrentTab() {
   }
 }
 
+// Enhanced auto-detection
 async function autoFetchFromCurrentTab() {
   try {
+    setLoading(true);
     const tab = await getCurrentTab();
-    if (!tab) {
-      showLocalizedToast("couldNotAccessCurrentTab", "error");
-      return;
+    if (!tab?.url) return;
+
+    // Auto-detect YouTube URL from clipboard if not on YouTube
+    if (!tab.url.includes('youtube.com')) {
+      const clipboardText = await navigator.clipboard.readText();
+      if (clipboardText.includes('youtube.com')) {
+        youtubeLinkInput.value = clipboardText;
+        await fetchYouTubeInfo(clipboardText);
+        return;
+      }
+    } else {
+      youtubeLinkInput.value = tab.url;
+      await fetchYouTubeInfo(tab.url);
     }
-    if (!tab.url?.includes("youtube.com/watch")) {
-      // Not a YT watch page, so we skip auto fetching
-      return;
-    }
-    // Set the URL in the input and fetch info
-    youtubeLinkInput.value = tab.url;
-    await fetchYouTubeInfo(tab.url);
   } catch (error) {
-    console.error("Auto-fetch error:", error);
-    showLocalizedToast("failedToAutoFetchVideoInfo", "error");
+    console.error('Auto-fetch error:', error);
+    showLocalizedToast('autoFetchError', 'error');
+  } finally {
+    setLoading(false);
   }
 }
+
+// Add input debouncing for search
+let searchTimeout;
+spotifySearchInput.addEventListener('input', (e) => {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    if (e.target.value.length >= 3) {
+      doSpotifySearch(e.target.value);
+    }
+  }, 500);
+});
+
+////////////////////////////////////////////////////////////////////////
+// 7. Keyboard Shortcuts
+////////////////////////////////////////////////////////////////////////
+
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey || e.metaKey) {
+    switch(e.key) {
+      case 'Enter':
+        e.preventDefault();
+        fetchYouTubeBtn.click();
+        break;
+      case 's':
+        e.preventDefault();
+        searchSpotifyBtn.click();
+        break;
+      case 'l':
+        e.preventDefault();
+        clearResultsBtn.click();
+        break;
+    }
+  }
+});
 
 ////////////////////////////////////////////////////////////////////////
 // 8. DOMContentLoaded Initialization
@@ -624,10 +552,8 @@ async function autoFetchFromCurrentTab() {
 
 document.addEventListener("DOMContentLoaded", async () => {
   try {
-    // Load saved results from localStorage
     loadSavedResults();
 
-    // Load saved YouTube info from localStorage
     const savedTitle = localStorage.getItem("youtubeTitle");
     const savedDescription = localStorage.getItem("youtubeDescription");
     if (savedTitle || savedDescription) {
@@ -636,30 +562,18 @@ document.addEventListener("DOMContentLoaded", async () => {
       videoDescriptionEl.textContent = savedDescription || "(No description)";
     }
 
-    // Possibly attempt to auto-fetch from current tab
     await autoFetchFromCurrentTab();
 
-    // Load saved language preference
     chrome.storage.local.get('language', (data) => {
       const savedLang = data.language || 'en';
       updateLanguage(savedLang);
     });
-    // If the user changes language in Options, listen for changes:
-    chrome.storage.onChanged.addListener((changes) => {
-      if (changes.language) {
-        updateLanguage(changes.language.newValue);
-      }
-    });
 
-    // Initialize language selector
     const languageSelect = document.getElementById('languageSelect');
     languageSelect.addEventListener('change', function () {
       updateLanguage(this.value);
     });
 
-    // Theme is already set at the top
-
-    // Event listeners
     fetchYouTubeBtn.addEventListener("click", () => fetchYouTubeInfo(youtubeLinkInput.value.trim()));
     searchSpotifyBtn.addEventListener("click", () => doSpotifySearch(spotifySearchInput.value.trim()));
     fetchSpotifyLinksBtn.addEventListener("click", () => {
@@ -701,79 +615,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         showLocalizedToast("errorOpeningOptions", "error");
       }
     });
-
-    // Add advanced features
-    addBatchProcessingFeature();
-    addExportFeature(); // see function below for exporting CSV, or place it inline
-
-    // If you have a user guide or a compare feature, enable them:
-    // const searchHistory = new SearchHistory();
-    // const compareBtn = compareTracksFeature(resultsDiv);
-    // if (!localStorage.getItem('guideSeen')) {
-    //   showUserGuide(currentLang);
-    //   localStorage.setItem('guideSeen', 'true');
-    // }
-
   } catch (error) {
     console.error("DOMContentLoaded error:", error);
     showLocalizedToast("failedToInitializeExtension", "error");
   }
 });
-
-////////////////////////////////////////////////////////////////////////
-// 9. Export CSV Feature (optional)
-////////////////////////////////////////////////////////////////////////
-
-function addExportFeature() {
-  const exportBtn = document.createElement('button');
-  exportBtn.className = 'btn btn-blue';
-  exportBtn.innerHTML = '📥 Export Results';
-  exportBtn.style.marginLeft = '8px';
-
-  exportBtn.addEventListener('click', () => {
-    const allItems = Array.from(resultsDiv.querySelectorAll('.result-item'));
-    if (!allItems.length) {
-      showLocalizedToast("noResultsToExport", "warning");
-      return;
-    }
-
-    // Build CSV from each .result-item
-    const results = allItems.map(item => {
-      const titleEl = item.querySelector('.result-title');
-      const subtitleEl = item.querySelector('.result-subtitle');
-      const isrcBtn = item.querySelector('.copy-isrc');
-      const upcBtn = item.querySelector('.copy-upc');
-      return {
-        title: titleEl ? titleEl.textContent : '',
-        artist: subtitleEl ? subtitleEl.textContent.split('•')[0].trim() : '',
-        isrc: isrcBtn ? (isrcBtn.getAttribute('data-value') || '') : '',
-        upc: upcBtn ? (upcBtn.getAttribute('data-value') || '') : ''
-      };
-    });
-
-    const header = ['Title', 'Artist', 'ISRC', 'UPC'];
-    const csvRows = [header.join(',')];
-    for (const r of results) {
-      csvRows.push([
-        r.title.replace(/,/g, ';'),
-        r.artist.replace(/,/g, ';'),
-        r.isrc,
-        r.upc
-      ].join(','));
-    }
-    const csvContent = csvRows.join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'exported_results.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  });
-
-  // Append the Export button next to the Clear Results button
-  const parent = document.getElementById('clearResultsBtn').parentNode;
-  parent.appendChild(exportBtn);
-}
