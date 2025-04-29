@@ -15,7 +15,7 @@ A powerful browser extension that bridges YouTube and Spotify to extract ISRC/UP
 
 1. **Install Dependencies**
    ```bash
-   git clone https://github.com/your-username/ISRCFinder.git
+   git clone https://github.com/enisgjinii/ISRCFinder
    cd ISRCFinder
    ```
 
