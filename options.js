@@ -3,23 +3,52 @@ import { showToast } from './utils/toast.js';
 import { languages } from './utils/languages.js';
 
 let currentLang = 'en';
+let currentTheme = 'light';
 
 function updateLanguage(lang) {
   currentLang = lang;
   const texts = languages[lang];
 
-  // Update all text content
-  document.querySelector('.title').textContent = `⚙️ ${texts.settings}`;
-  document.querySelector('#spotifyHeader h2').textContent = `🎧 ${texts.spotifyCredentials}`;
-  document.querySelector('#spotifyBody .small-note').textContent = texts.spotifyNote;
-  document.querySelector('#spotifyClientId').placeholder = texts.clientId;
-  document.querySelector('#spotifyClientSecret').placeholder = texts.clientSecret;
-  document.querySelector('#youtubeHeader h2').textContent = `📺 ${texts.youtubeApiKey}`;
-  document.querySelector('#youtubeBody .small-note').textContent = texts.youtubeNote;
-  document.querySelector('#youtubeApiKey').placeholder = texts.youtubeApiKey;
-  document.querySelector('#saveBtn').textContent = `💾 ${texts.saveChanges}`;
-  document.querySelector('#clearBtn').textContent = `❌ ${texts.clearAll}`;
-  document.querySelector('#testBtn').textContent = `✅ ${texts.testConnection}`;
+  // Update header
+  document.querySelector('.logo-section h1').textContent = texts.settings || 'ISRC Finder Dashboard';
+  document.querySelector('.logo-section p').textContent = texts.dashboardSubtitle || 'Manage your extension settings and monitor activity';
+
+  // Update card headers
+  document.querySelector('.api-config-card .card-header h3').textContent = `🔑 ${texts.apiConfiguration || 'API Configuration'}`;
+  document.querySelector('.automation-card .card-header h3').textContent = `🤖 ${texts.automation || 'Automation Settings'}`;
+  document.querySelector('.appearance-card .card-header h3').textContent = `🎨 ${texts.appearance || 'Appearance'}`;
+  document.querySelector('.export-card .card-header h3').textContent = `📤 ${texts.exportData || 'Export & Data'}`;
+  document.querySelector('.notifications-card .card-header h3').textContent = `🔔 ${texts.notifications || 'Notifications'}`;
+  document.querySelector('.backup-card .card-header h3').textContent = `💾 ${texts.backupSync || 'Backup & Sync'}`;
+
+  // Update form labels and placeholders
+  document.querySelector('label[for="spotifyClientId"]').textContent = texts.clientId || 'Spotify Client ID';
+  document.querySelector('#spotifyClientId').placeholder = texts.enterClientId || 'Enter your Spotify Client ID';
+  document.querySelector('label[for="spotifyClientSecret"]').textContent = texts.clientSecret || 'Spotify Client Secret';
+  document.querySelector('#spotifyClientSecret').placeholder = texts.enterClientSecret || 'Enter your Spotify Client Secret';
+  document.querySelector('label[for="spotifyDuration"]').textContent = texts.tokenDuration || 'Token Duration (hours)';
+  document.querySelector('label[for="youtubeApiKey"]').textContent = texts.youtubeApiKey || 'YouTube API Key';
+  document.querySelector('#youtubeApiKey').placeholder = texts.enterYoutubeApiKey || 'Enter your YouTube Data API v3 key';
+
+  // Update buttons
+  document.querySelector('#saveBtn').textContent = `💾 ${texts.saveChanges || 'Save Configuration'}`;
+  document.querySelector('#testBtn').textContent = `✅ ${texts.testConnection || 'Test Connection'}`;
+  document.querySelector('#clearBtn').textContent = `🗑️ ${texts.clearAll || 'Reset All Settings'}`;
+
+  // Update setting descriptions
+  const autoFetchLabel = document.querySelector('.automation-card .setting-item:nth-child(1) .setting-info label');
+  const clipboardLabel = document.querySelector('.automation-card .setting-item:nth-child(2) .setting-info label');
+  const desktopNotifsLabel = document.querySelector('.notifications-card .setting-item .setting-info label');
+
+  if (autoFetchLabel) autoFetchLabel.textContent = texts.autoFetch || 'Auto-Fetch';
+  if (clipboardLabel) clipboardLabel.textContent = texts.clipboardMonitor || 'Clipboard Monitor';
+  if (desktopNotifsLabel) desktopNotifsLabel.textContent = texts.desktopNotifications || 'Desktop Notifications';
+
+  // Update setting descriptions
+  document.querySelector('.automation-card .setting-item:nth-child(1) .setting-description').textContent = texts.autoFetchDesc || 'Automatically search for ISRC codes';
+  document.querySelector('.automation-card .setting-item:nth-child(2) .setting-description').textContent = texts.clipboardMonitorDesc || 'Scan clipboard for music links';
+  document.querySelector('.notifications-card .setting-item .setting-description').textContent = texts.desktopNotificationsDesc || 'Show system notifications';
+  document.querySelector('.export-card .setting-item .setting-description').textContent = texts.autoExportDesc || 'Automatically export search results';
 }
 
 /**
@@ -93,7 +122,65 @@ async function testConnection() {
   }
 }
 
+// Dashboard Statistics Functions
+function updateDashboardStats() {
+  // Load statistics from storage
+  chrome.storage.local.get(['searchStats', 'lastActivity'], (data) => {
+    const stats = data.searchStats || { totalSearches: 0, successfulFinds: 0, exportCount: 0 };
+
+    document.getElementById('totalSearches').textContent = stats.totalSearches || 0;
+    document.getElementById('successfulFinds').textContent = stats.successfulFinds || 0;
+    document.getElementById('exportCount').textContent = stats.exportCount || 0;
+
+    const lastActivity = data.lastActivity || Date.now();
+    const timeAgo = getTimeAgo(lastActivity);
+    document.getElementById('lastActivity').textContent = timeAgo;
+  });
+}
+
+function getTimeAgo(timestamp) {
+  const now = Date.now();
+  const diff = now - timestamp;
+
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  return `${days}d ago`;
+}
+
+function updateApiStatus() {
+  const clientId = document.getElementById('spotifyClientId').value.trim();
+  const clientSecret = document.getElementById('spotifyClientSecret').value.trim();
+  const apiKey = document.getElementById('youtubeApiKey').value.trim();
+
+  const statusElement = document.getElementById('apiStatus');
+  const isConfigured = clientId && clientSecret && apiKey;
+
+  if (isConfigured) {
+    statusElement.textContent = 'Configured';
+    statusElement.classList.add('configured');
+  } else {
+    statusElement.textContent = 'Not Configured';
+    statusElement.classList.remove('configured');
+  }
+}
+
+// Volume Control
+function updateVolumeDisplay() {
+  const volumeSlider = document.getElementById('alertVolume');
+  const volumeDisplay = document.getElementById('volumeValue');
+  volumeDisplay.textContent = `${volumeSlider.value}%`;
+}
+
 document.addEventListener('DOMContentLoaded', function () {
+  // Initialize theme first to avoid flash
+  initializeTheme();
+  setupThemeToggle();
+
   // Initialize: Load saved settings from chrome.storage
   try {
     chrome.storage.local.get(
@@ -116,6 +203,9 @@ document.addEventListener('DOMContentLoaded', function () {
         if (data.spotifyClientId) document.getElementById('spotifyClientId').value = data.spotifyClientId;
         if (data.spotifyClientSecret) document.getElementById('spotifyClientSecret').value = data.spotifyClientSecret;
         if (data.youtubeApiKey) document.getElementById('youtubeApiKey').value = data.youtubeApiKey;
+
+        // Update API status after loading
+        setTimeout(updateApiStatus, 100);
       }
     );
   } catch (error) {
@@ -168,6 +258,7 @@ document.addEventListener('DOMContentLoaded', function () {
           return;
         }
         showLocalizedToast('success');
+        updateApiStatus();
       });
     } catch (error) {
       console.error('Settings save error:', error);
@@ -177,10 +268,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Clear Settings
   document.getElementById('clearBtn').addEventListener('click', function () {
-    try {
-      chrome.storage.local.remove(
-        ['spotifyClientId', 'spotifyClientSecret', 'youtubeApiKey', 'userCredentials'],
-        function () {
+    if (confirm('Are you sure you want to reset all settings? This action cannot be undone.')) {
+      try {
+        chrome.storage.local.clear(function () {
           if (chrome.runtime.lastError) {
             console.error('Settings clear error:', chrome.runtime.lastError);
             showLocalizedToast('errorClearingSettings');
@@ -190,54 +280,54 @@ document.addEventListener('DOMContentLoaded', function () {
           document.getElementById('spotifyClientId').value = '';
           document.getElementById('spotifyClientSecret').value = '';
           document.getElementById('youtubeApiKey').value = '';
+
+          // Reset all toggles and inputs
+          document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+          document.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+          document.querySelectorAll('input[type="color"]').forEach(color => color.value = '#6366f1');
+          document.querySelectorAll('input[type="range"]').forEach(range => range.value = 50);
+
+          updateVolumeDisplay();
+          updateApiStatus();
           showLocalizedToast('allSettingsCleared');
-        }
-      );
-    } catch (error) {
-      console.error('Settings clear error:', error);
-      showLocalizedToast('failedToClearSettings');
+        });
+      } catch (error) {
+        console.error('Settings clear error:', error);
+        showLocalizedToast('failedToClearSettings');
+      }
     }
   });
 
   // Test button
   document.getElementById('testBtn').addEventListener('click', function () {
+    const testBtn = this;
+    testBtn.disabled = true;
+    testBtn.innerHTML = '⌛ Testing...';
+
     chrome.runtime.sendMessage({ action: "TEST_CREDENTIALS" }, (response) => {
-      if (response.success) {
+      testBtn.disabled = false;
+      testBtn.innerHTML = '✅ Test Connection';
+
+      if (response && response.success) {
         showLocalizedToast('spotifyConnectionSuccess', 'success');
       } else {
-        showLocalizedToast(`connectionFailed: ${response.error}`, 'error');
+        const errorMsg = response ? response.error : 'Unknown error';
+        showLocalizedToast(`connectionFailed: ${errorMsg}`, 'error');
       }
     });
   });
 
-  // Section Toggle
-  document.querySelectorAll('.section-header').forEach(header => {
-    header.addEventListener('click', function () {
-      const section = this.parentElement;
-      const wasActive = section.classList.contains('active');
+  // Volume control
+  const volumeSlider = document.getElementById('alertVolume');
+  volumeSlider.addEventListener('input', updateVolumeDisplay);
 
-      document.querySelectorAll('.section').forEach(s => {
-        s.classList.remove('active');
-      });
-
-      if (!wasActive) {
-        section.classList.add('active');
-      }
-    });
+  // Update API status when inputs change
+  ['spotifyClientId', 'spotifyClientSecret', 'youtubeApiKey'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updateApiStatus);
   });
 
-  // Add advanced settings toggle
-  const advancedSettingsToggle = document.createElement("button");
-  advancedSettingsToggle.className = "btn btn-outline";
-  advancedSettingsToggle.textContent = languages[currentLang].advancedSettings;
-  advancedSettingsToggle.addEventListener("click", () => {
-    showModal(
-      languages[currentLang].advancedSettings,
-      "Advanced settings are under development.",
-      "info"
-    );
-  });
-  document.querySelector(".actions").appendChild(advancedSettingsToggle);
+  // Initialize dashboard stats
+  updateDashboardStats();
 
   // Initialize new features
   initializeAutoFetchSettings();
@@ -245,6 +335,9 @@ document.addEventListener('DOMContentLoaded', function () {
   initializeExportSettings();
   initializeNotificationSettings();
   initializeBackupSettings();
+
+  // Update volume display initially
+  updateVolumeDisplay();
 });
 
 // 1. Auto-Fetch Settings
@@ -271,12 +364,12 @@ function initializeAppearanceSettings() {
   chrome.storage.local.get(['accentColor', 'fontSize'], (data) => {
     accentColor.value = data.accentColor || '#6366f1';
     fontSize.value = data.fontSize || 'medium';
-    applyTheme(data.accentColor, data.fontSize);
+    applyAppearanceTheme(data.accentColor, data.fontSize);
   });
 
   accentColor.addEventListener('change', (e) => {
     chrome.storage.local.set({ accentColor: e.target.value });
-    applyTheme(e.target.value);
+    applyAppearanceTheme(e.target.value);
   });
 }
 
@@ -317,6 +410,16 @@ function initializeBackupSettings() {
   exportSettingsBtn.addEventListener('click', async () => {
     const settings = await exportSettings();
     downloadJson(settings, 'isrc-finder-settings.json');
+
+    // Update stats after export
+    chrome.storage.local.get(['searchStats'], (data) => {
+      const stats = data.searchStats || { totalSearches: 0, successfulFinds: 0, exportCount: 0 };
+      stats.exportCount = (stats.exportCount || 0) + 1;
+      chrome.storage.local.set({ searchStats: stats });
+      updateDashboardStats();
+    });
+
+    showToast('Settings exported successfully', 'success');
   });
 
   importSettingsBtn.addEventListener('click', () => {
@@ -325,6 +428,31 @@ function initializeBackupSettings() {
     input.accept = '.json';
     input.onchange = (e) => importSettings(e.target.files[0]);
     input.click();
+  });
+
+  backupFrequency.addEventListener('change', (e) => {
+    chrome.storage.local.set({ backupFrequency: e.target.value });
+  });
+
+  // Load backup settings
+  chrome.storage.local.get(['backupFrequency', 'lastBackup'], (data) => {
+    if (data.backupFrequency) {
+      backupFrequency.value = data.backupFrequency;
+    }
+
+    const lastBackupDate = data.lastBackup ? new Date(data.lastBackup).toLocaleDateString() : 'Never';
+    document.getElementById('lastBackupDate').textContent = lastBackupDate;
+  });
+
+  // Calculate and display settings size
+  updateSettingsSize();
+}
+
+function updateSettingsSize() {
+  chrome.storage.local.get(null, (data) => {
+    const sizeBytes = new Blob([JSON.stringify(data)]).size;
+    const sizeKB = Math.round(sizeBytes / 1024);
+    document.getElementById('settingsSize').textContent = `${sizeKB} KB`;
   });
 }
 
@@ -363,7 +491,7 @@ function downloadJson(data, filename) {
   URL.revokeObjectURL(url);
 }
 
-function applyTheme(accentColor, fontSize = 'medium') {
+function applyAppearanceTheme(accentColor, fontSize = 'medium') {
   document.documentElement.style.setProperty('--primary', accentColor);
   document.documentElement.style.fontSize = {
     small: '14px',
@@ -375,4 +503,59 @@ function applyTheme(accentColor, fontSize = 'medium') {
 function showLocalizedToast(key, type = 'info') {
   const text = languages[currentLang][key] || key;
   showToast(text, type);
+}
+
+// Theme Management Functions
+function initializeTheme() {
+  // Get saved theme or detect system preference
+  const savedTheme = localStorage.getItem('theme');
+  const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  
+  if (savedTheme) {
+    currentTheme = savedTheme;
+  } else {
+    currentTheme = systemPrefersDark ? 'dark' : 'light';
+  }
+  
+  applyTheme(currentTheme);
+  updateThemeToggleIcon();
+}
+
+function applyTheme(theme) {
+  currentTheme = theme;
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('theme', theme);
+  updateThemeToggleIcon();
+}
+
+function toggleTheme() {
+  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+  applyTheme(newTheme);
+  
+  // Show toast notification
+  const themeKey = newTheme === 'dark' ? 'darkModeEnabled' : 'lightModeEnabled';
+  showLocalizedToast(themeKey, 'success');
+}
+
+function updateThemeToggleIcon() {
+  const themeIcon = document.querySelector('.theme-icon');
+  if (themeIcon) {
+    themeIcon.textContent = currentTheme === 'dark' ? '☀️' : '🌙';
+  }
+}
+
+function setupThemeToggle() {
+  const themeToggle = document.getElementById('themeToggle');
+  if (themeToggle) {
+    themeToggle.addEventListener('click', toggleTheme);
+  }
+  
+  // Listen for system theme changes
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    // Only update if user hasn't manually set a theme
+    if (!localStorage.getItem('theme')) {
+      currentTheme = e.matches ? 'dark' : 'light';
+      applyTheme(currentTheme);
+    }
+  });
 }

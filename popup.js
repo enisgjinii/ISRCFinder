@@ -9,16 +9,14 @@ import { showToast } from './utils/toast.js';
 const openOptionsBtn = document.getElementById("openOptionsBtn");
 const youtubeLinkInput = document.getElementById("youtubeLinkInput");
 const fetchYouTubeBtn = document.getElementById("fetchYouTubeBtn");
-const youtubeInfoDiv = document.getElementById("youtubeInfo");
-const videoTitleEl = document.getElementById("videoTitle");
-const videoDescriptionEl = document.getElementById("videoDescription");
-const spotifySearchInput = document.getElementById("spotifySearchInput");
 const searchSpotifyBtn = document.getElementById("searchSpotifyBtn");
 const manualSpotifyInput = document.getElementById("manualSpotifyInput");
 const fetchSpotifyLinksBtn = document.getElementById("fetchSpotifyLinksBtn");
 const resultsDiv = document.getElementById("results");
 const clearResultsBtn = document.getElementById("clearResultsBtn");
 const toastContainer = document.getElementById("toastContainer");
+const spotifyLinkSection = document.getElementById("spotifyLinkSection");
+const resultsCount = document.getElementById("resultsCount");
 
 let currentLang = 'en';
 // We'll keep track of the active <audio> element so only one can play at a time
@@ -60,28 +58,43 @@ prefersDark.addEventListener("change", () => {
   }
 });
 
-function updateLanguage(lang) {
-  currentLang = lang;
-  const texts = translations[lang] || translations.en;
-
-  // Example: update placeholders/text
-  youtubeLinkInput.placeholder = texts.youtubeUrl || "🔗 YouTube URL";
-  fetchYouTubeBtn.textContent = texts.getInfo || "✨ Get Info";
-  document.querySelectorAll('#youtubeInfo .info-title')[0].textContent = texts.videoTitle || "🎬 Title";
-  document.querySelectorAll('#youtubeInfo .info-title')[1].textContent = texts.videoDescription || "📝 Description";
-  spotifySearchInput.placeholder = texts.songSearch || "🎵 Song title to search";
-  searchSpotifyBtn.textContent = texts.searchSpotify || "🔍 Search Spotify";
-  manualSpotifyInput.placeholder = texts.spotifyLinkPlaceholder || "🔗 Or paste Spotify link here";
-  fetchSpotifyLinksBtn.textContent = texts.getDetails || "✨ Get Details";
-  document.querySelector('.card-title').textContent = texts.results || "📑 Results";
-  openOptionsBtn.title = texts.settings || "Settings";
-
+function updateLanguage() {
+  const texts = translations[currentLang] || translations.en;
+  
+  // Update input placeholder
+  youtubeLinkInput.placeholder = "🎬 YouTube URL or 🎵 Song title...";
+  manualSpotifyInput.placeholder = texts.spotifyLinkPlaceholder || "🔗 Paste Spotify links here...";
+  
+  // Update results count
+  updateResultsCount();
+  
   const languageSelect = document.getElementById('languageSelect');
   if (languageSelect) {
-    languageSelect.value = lang;
+    languageSelect.value = currentLang;
   }
+}
 
-  chrome.storage.local.set({ language: lang });
+function updateResultsCount() {
+  const resultItems = resultsDiv.querySelectorAll('.result-item:not(.empty-state)');
+  const count = resultItems.length;
+  if (resultsCount) {
+    resultsCount.textContent = count === 0 ? 'No results' : count === 1 ? '1 result' : `${count} results`;
+  }
+}
+
+function handleSpotifyLinks() {
+  const links = manualSpotifyInput.value.trim().split('\n').filter(link => link.trim());
+  if (links.length === 0) return;
+  
+  // Process each Spotify link
+  links.forEach(link => {
+    if (link.includes('spotify.com/track/')) {
+      doSpotifyLinkFetch(link.trim());
+    }
+  });
+  
+  // Clear the input
+  manualSpotifyInput.value = '';
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -139,10 +152,8 @@ async function fetchYouTubeInfo(url) {
           return;
         }
         const snippet = items[0].snippet || {};
-        youtubeInfoDiv.style.display = "block";
-        videoTitleEl.textContent = snippet.title || "(No title)";
-        videoDescriptionEl.textContent = snippet.description || "(No description)";
-
+        
+        // Store YouTube info for potential fallback searching
         localStorage.setItem("youtubeTitle", snippet.title || "");
         localStorage.setItem("youtubeDescription", snippet.description || "");
 
@@ -276,15 +287,17 @@ function buildSpotifySearchResultsUI(searchData, originalQuery) {
     });
 
     resultsDiv.appendChild(row);
+    updateResultsCount();
   });
 
   const bestSim = Math.max(...items.map(t => computeDiceCoefficient(originalQuery, t.name)));
-  if (bestSim < 0.3 && videoDescriptionEl.textContent.trim()) {
+  const storedDescription = localStorage.getItem("youtubeDescription") || "";
+  if (bestSim < 0.3 && storedDescription.trim()) {
     const fallbackBtn = document.createElement("button");
     fallbackBtn.classList.add("btn", "btn-small", "btn-purple");
     fallbackBtn.textContent = "Try with Description 🔄";
     fallbackBtn.addEventListener("click", () => {
-      const fallbackQuery = videoDescriptionEl.textContent
+      const fallbackQuery = storedDescription
         .trim()
         .split(" ")
         .slice(0, 10)
@@ -372,6 +385,7 @@ function buildTrackDetailsCard(trackData, audioFeatures) {
   }
 
   resultsDiv.appendChild(container);
+  updateResultsCount();
   updateSavedResults();
 }
 
@@ -512,19 +526,48 @@ async function autoFetchFromCurrentTab() {
   }
 }
 
-// Add input debouncing for search
-let searchTimeout;
-spotifySearchInput.addEventListener('input', (e) => {
-  clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(() => {
-    if (e.target.value.length >= 3) {
-      doSpotifySearch(e.target.value);
+////////////////////////////////////////////////////////////////////////
+// 7. Event Listeners for Compact Interface
+////////////////////////////////////////////////////////////////////////
+
+// Main input handler - can detect YouTube URL or song title
+fetchYouTubeBtn.addEventListener('click', () => {
+  const input = youtubeLinkInput.value.trim();
+  if (!input) return;
+  
+  // Check if it's a YouTube URL
+  if (parseYouTubeId(input)) {
+    handleYouTubeInput();
+  } else {
+    // Treat as song title and search Spotify
+    doSpotifySearch(input);
+  }
+});
+
+// Show Spotify link input section
+fetchSpotifyLinksBtn.addEventListener('click', () => {
+  if (spotifyLinkSection.style.display === 'none' || !spotifyLinkSection.style.display) {
+    spotifyLinkSection.style.display = 'block';
+    manualSpotifyInput.focus();
+  } else {
+    const links = manualSpotifyInput.value.trim();
+    if (links) {
+      handleSpotifyLinks();
     }
-  }, 500);
+    spotifyLinkSection.style.display = 'none';
+  }
+});
+
+// Search Spotify directly
+searchSpotifyBtn.addEventListener('click', () => {
+  const input = youtubeLinkInput.value.trim();
+  if (input) {
+    doSpotifySearch(input);
+  }
 });
 
 ////////////////////////////////////////////////////////////////////////
-// 7. Keyboard Shortcuts
+// 8. Keyboard Shortcuts
 ////////////////////////////////////////////////////////////////////////
 
 document.addEventListener('keydown', (e) => {
@@ -547,20 +590,16 @@ document.addEventListener('keydown', (e) => {
 });
 
 ////////////////////////////////////////////////////////////////////////
-// 8. DOMContentLoaded Initialization
+// 9. DOMContentLoaded Initialization
 ////////////////////////////////////////////////////////////////////////
 
 document.addEventListener("DOMContentLoaded", async () => {
   try {
     loadSavedResults();
 
-    const savedTitle = localStorage.getItem("youtubeTitle");
-    const savedDescription = localStorage.getItem("youtubeDescription");
-    if (savedTitle || savedDescription) {
-      youtubeInfoDiv.style.display = "block";
-      videoTitleEl.textContent = savedTitle || "(No title)";
-      videoDescriptionEl.textContent = savedDescription || "(No description)";
-    }
+    // YouTube info is stored but not displayed in compact interface
+    // const savedTitle = localStorage.getItem("youtubeTitle");
+    // const savedDescription = localStorage.getItem("youtubeDescription");
 
     await autoFetchFromCurrentTab();
 
@@ -601,7 +640,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     clearResultsBtn.addEventListener("click", () => {
-      resultsDiv.innerHTML = "";
+      resultsDiv.innerHTML = `
+        <div class="empty-state" id="emptyState">
+          <i class="bx bx-search empty-icon"></i>
+          <p>Search for songs to find ISRC codes</p>
+        </div>
+      `;
+      updateResultsCount();
       updateSavedResults();
       showLocalizedToast("resultsCleared", "success");
     });

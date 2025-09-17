@@ -3,132 +3,75 @@
 
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=500, height=500, initial-scale=1.0, user-scalable=no">
   <title>ISRC Finder</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/boxicons@2.1.4/css/boxicons.min.css">
 </head>
 
 <body>
-  <div class="main-container">
-    <!-- Header with logo and controls -->
-    <div class="top-bar">
-      <div class="logo-section">
-        <img src="icons/logo48.png" alt="ISRC Finder" class="logo">
-        <span class="app-title">ISRC Finder</span>
+  <div class="main-container compact">
+    <!-- Compact Header -->
+    <div class="compact-header">
+      <div class="header-left">
+        <img src="icons/logo16.png" alt="ISRC Finder" class="compact-logo">
+        <span class="compact-title">ISRC Finder</span>
       </div>
-      <div class="controls">
-        <div class="theme-toggle">
-          <button class="theme-btn" data-theme="system" title="System theme"><i class="bx bx-desktop"></i></button>
-          <button class="theme-btn" data-theme="light" title="Light theme"><i class="bx bx-sun"></i></button>
-          <button class="theme-btn" data-theme="dark" title="Dark theme"><i class="bx bx-moon"></i></button>
-        </div>
-        <div class="language-selector">
-          <select id="languageSelect" aria-label="Select language">
-            <option value="en">🇬🇧 English</option>
-            <option value="sq">🇦🇱 Shqip</option>
-            <option value="de">🇩🇪 Deutsch</option>
-          </select>
-        </div>
-        <button id="openOptionsBtn" class="settings-btn" title="Settings">
-          <i class="bx bx-cog"></i>
+      <div class="header-right">
+        <select id="languageSelect" class="compact-select" title="Language">
+          <option value="en">🇬🇧</option>
+          <option value="sq">🇦🇱</option>
+          <option value="de">🇩🇪</option>
+        </select>
+        <button class="theme-btn compact-btn" data-theme="light" title="Toggle theme"><i class="bx bx-sun"></i></button>
+        <button id="openOptionsBtn" class="compact-btn" title="Settings"><i class="bx bx-cog"></i></button>
+      </div>
+    </div>
+
+    <!-- Search Input -->
+    <div class="search-section">
+      <div class="input-group compact">
+        <input type="text" id="youtubeLinkInput" 
+               placeholder="🎬 YouTube URL or 🎵 Song title..." 
+               class="main-input">
+        <button id="fetchYouTubeBtn" class="search-btn" title="Search (Ctrl+Enter)">
+          <i class="bx bx-search"></i>
         </button>
       </div>
     </div>
 
-    <!-- YouTube section -->
-    <div class="card">
-      <h2 class="card-title"><i class="bx bxl-youtube" style="color: #FF0000;"></i> YouTube</h2>
-
-      <div class="input-group">
-        <i class="bx bx-link input-icon"></i>
-        <input type="text" id="youtubeLinkInput" 
-               placeholder="Enter YouTube URL (Ctrl+Enter)" 
-               aria-label="YouTube URL">
-        <div class="status-indicator"></div>
-        <div class="loading-overlay">
-          <div class="pulse"></div>
-        </div>
-      </div>
-      <button id="fetchYouTubeBtn" class="btn btn-purple" title="Ctrl+Enter">
-        <i class="bx bx-search-alt"></i> <span id="fetchYouTubeBtnText">Get Info</span>
-      </button>
-
-      <div id="youtubeInfo" class="youtube-info" style="display: none;">
-        <div class="info-title"><i class="bx bx-movie-play"></i> <span id="videoTitleLabel">Video Title</span></div>
-        <p id="videoTitle" class="video-title"></p>
-        
-        <div class="info-title"><i class="bx bx-text"></i> <span id="videoDescriptionLabel">Description</span></div>
-        <div id="videoDescription" class="video-description"></div>
-        
-        <div class="tags-container" id="videoTags"></div>
-      </div>
-    </div>
-
-    <!-- Spotify section -->
-    <div class="card">
-      <h2 class="card-title"><i class="bx bxl-spotify" style="color: #1DB954;"></i> Spotify Search</h2>
-
-      <div class="input-group">
-        <i class="bx bx-music input-icon"></i>
-        <input type="text" id="spotifySearchInput" placeholder="Song title to search" aria-label="Song title">
-      </div>
-      <button id="searchSpotifyBtn" class="btn btn-green">
-        <i class="bx bx-search"></i> <span id="searchSpotifyBtnText">Search Spotify</span>
-      </button>
-
-      <div class="or-divider">
-        <span>OR</span>
-      </div>
-
-      <div class="input-group">
-        <i class="bx bxl-spotify input-icon"></i>
-        <textarea id="manualSpotifyInput" placeholder="Paste Spotify link(s) here - one link per line" 
-          aria-label="Spotify links"></textarea>
-      </div>
-      <button id="fetchSpotifyLinksBtn" class="btn btn-purple">
-        <i class="bx bx-link-external"></i> <span id="fetchSpotifyLinksBtnText">Get Details</span>
-      </button>
-    </div>
-
     <!-- Results section -->
-    <div class="card" id="resultsCard">
-      <div class="card-header">
-        <h2 class="card-title" style="margin: 0;"><i class="bx bx-list-ul"></i> <span id="resultsLabel">Results</span></h2>
-        <div class="btn-group" style="margin: 0;">
-          <button id="exportResultsBtn" class="btn btn-sm btn-outline" title="Export results" style="margin: 0;">
-            <i class="bx bx-export"></i> Export
+    <div class="results-section" id="resultsCard">
+      <div class="results-header">
+        <span id="resultsCount" class="results-count">0 results</span>
+        <div class="header-actions">
+          <button id="searchSpotifyBtn" class="header-btn" title="Search Spotify">
+            <i class="bx bxl-spotify"></i>
           </button>
-          <button id="clearResultsBtn" class="btn btn-sm btn-outline" title="Clear results" style="margin: 0;">
+          <button id="fetchSpotifyLinksBtn" class="header-btn" title="Add Spotify links">
+            <i class="bx bx-link"></i>
+          </button>
+          <button id="clearResultsBtn" class="header-btn" title="Clear all">
             <i class="bx bx-trash"></i>
           </button>
+          <button id="exportResultsBtn" class="header-btn" title="Export">
+            <i class="bx bx-export"></i>
+          </button>
         </div>
       </div>
-      <div id="resultsStats" class="result-meta" style="display: none;">
-        <span id="resultsCount">0</span> items found
-      </div>
-      <div id="results" class="results">
-        <!-- Results will be populated here -->
+      <div id="results" class="results compact">
         <div class="empty-state" id="emptyState">
-          <div class="empty-icon"><i class="bx bx-search"></i></div>
-          <p>No results yet. Search for a song or enter a YouTube URL.</p>
+          <i class="bx bx-search empty-icon"></i>
+          <p>Search for songs to find ISRC codes</p>
         </div>
       </div>
     </div>
 
-    <!-- Keyboard shortcuts -->
-    <div class="keyboard-shortcuts">
-      <div class="shortcut">
-        <kbd>Ctrl</kbd> + <kbd>Enter</kbd>
-        <span>Fetch YouTube Info</span>
-      </div>
-      <div class="shortcut">
-        <kbd>Ctrl</kbd> + <kbd>S</kbd>
-        <span>Search Spotify</span>
-      </div>
-      <div class="shortcut">
-        <kbd>Ctrl</kbd> + <kbd>L</kbd>
-        <span>Clear Results</span>
-      </div>
+    <!-- Hidden Spotify input -->
+    <div class="spotify-input" id="spotifyLinkSection" style="display: none;">
+      <textarea id="manualSpotifyInput" 
+                placeholder="Paste Spotify links here (one per line)..." 
+                class="compact-textarea"></textarea>
     </div>
   </div>
 
